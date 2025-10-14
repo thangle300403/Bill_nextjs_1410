@@ -19,36 +19,28 @@ export const metadata: Metadata = {
   title: "Sản phẩm",
 };
 
-// ✅ Promise-based props for Next.js 15
 interface SanPhamPageProps {
-  params: Promise<{ slug: string }>;
-  searchParams?: Promise<{
-    page?: string;
-    sort?: string;
-    priceRange?: string;
-  }>;
+  params: { slug: string };
+  searchParams?: { page?: string; sort?: string; priceRange?: string };
 }
 
 export default async function SanPhamPage({
   params,
   searchParams,
 }: SanPhamPageProps) {
-  // ✅ Await both props
-  const resolvedParams = await params;
-  const resolvedSearch = (await searchParams) || {};
+  const paramsCat = await params;
+  const categoryId = extractCategoryId(paramsCat.slug);
 
-  const categoryId = extractCategoryId(resolvedParams.slug);
-  if (!categoryId) return notFound();
-
-  // ✅ Fetch category list and find the correct one
-  const resCat = await axiosNonAuthInstanceNest.get<Category>(
-    `/categories/${categoryId}`
-  );
+  const resCat = await axiosNonAuthInstanceNest.get<Category>(`/categories`);
   const categoryName = resCat.data.name;
 
-  const page = Number(resolvedSearch.page ?? 1);
-  const sort = resolvedSearch.sort ?? "";
-  const priceRange = resolvedSearch.priceRange ?? "";
+  if (!categoryId) return notFound();
+
+  const searchParmsCat = await searchParams;
+
+  const page = Number(searchParmsCat?.page ?? 1);
+  const sort = searchParmsCat?.sort ?? "";
+  const priceRange = searchParmsCat?.priceRange ?? "";
 
   const queryParams = new URLSearchParams({
     item_per_page: "10",
