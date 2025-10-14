@@ -6,8 +6,7 @@ export default async function ActiveAccountPage({
 }: {
   searchParams: { token?: string };
 }) {
-  const tokenVal = await searchParams;
-  const token = tokenVal.token;
+  const token = searchParams.token;
 
   if (!token) {
     console.error("Thiếu token kích hoạt.");
