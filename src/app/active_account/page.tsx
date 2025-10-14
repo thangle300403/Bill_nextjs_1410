@@ -1,13 +1,10 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-interface ActiveAccountPageProps {
-  searchParams: { token?: string };
-}
-
-export default async function ActiveAccountPage({
-  searchParams,
-}: ActiveAccountPageProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default async function ActiveAccountPage(props: any) {
+  // ✅ Compatible with all runtimes (Edge / Node)
+  const searchParams = (await props.searchParams) || {}; // handles if it's a Promise
   const token = searchParams.token;
 
   if (!token) {
@@ -18,7 +15,6 @@ export default async function ActiveAccountPage({
   try {
     const cookieStore = await cookies();
     const cookieList = cookieStore.getAll ? cookieStore.getAll() : [];
-
     const cookieHeader = cookieList
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
