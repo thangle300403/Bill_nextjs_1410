@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { extractCategoryId } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { Category } from "@/types/category";
+import { Suspense } from "react";
 
 interface ProductListResponse {
   items: Product[];
@@ -66,12 +67,14 @@ export default async function SanPhamPage({
 
   return (
     <div className="container py-8">
-      <ProductList
-        products={items}
-        currentPage={Number(pagination.page)}
-        totalPages={pagination.totalPage}
-        categoryName={categoryName}
-      />
+      <Suspense fallback={<div>Đang tải...</div>}>
+        <ProductList
+          products={items}
+          currentPage={Number(pagination.page)}
+          totalPages={pagination.totalPage}
+          categoryName={categoryName}
+        />
+      </Suspense>
     </div>
   );
 }

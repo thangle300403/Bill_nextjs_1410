@@ -2,7 +2,7 @@
 
 import { usePopupStore } from "@/store/popupStore";
 import Link from "next/link";
-import React from "react";
+import React, { Suspense } from "react";
 import LoginForm from "../auth/LoginForm";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -211,7 +211,9 @@ export default function Header({ categories }: { categories: Category[] }) {
         )}
 
         <div className={`${isMobile ? "mt-10" : ""}`}>
-          <HeaderContent></HeaderContent>
+          <Suspense fallback={<div>Đang tải...</div>}>
+            <HeaderContent></HeaderContent>
+          </Suspense>
 
           {/* Add Sidebar Trigger to header */}
           <CategorySidebar categories={categories}></CategorySidebar>

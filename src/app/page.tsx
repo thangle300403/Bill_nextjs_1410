@@ -3,6 +3,7 @@ import HomeClient from "@/components/home/HomeClient";
 import { axiosNonAuthInstanceNest } from "@/lib/utils";
 import { Category } from "@/types/category";
 import { CategoriedProduct, Product, ProductComment } from "@/types/product";
+import { Suspense } from "react";
 
 export default async function HomePage() {
   try {
@@ -67,14 +68,16 @@ export default async function HomePage() {
     );
     return (
       <>
-        <CleanLoginQuery />
-        <HomeClient
-          serverData={{
-            featured,
-            latest,
-            categoried,
-          }}
-        />
+        <Suspense fallback={<div>Đang tải...</div>}>
+          <CleanLoginQuery />
+          <HomeClient
+            serverData={{
+              featured,
+              latest,
+              categoried,
+            }}
+          />
+        </Suspense>
       </>
     );
   } catch (err) {

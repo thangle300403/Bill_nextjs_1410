@@ -2,6 +2,7 @@ import ProductList from "@/components/productPage/ProductList";
 import { axiosNonAuthInstanceNest } from "@/lib/utils";
 import { Product } from "@/types/product";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -54,11 +55,13 @@ export default async function SanPhamPage({ searchParams }: SanPhamPageProps) {
   return (
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-6">Tất cả sản phẩm</h1>
-      <ProductList
-        products={items}
-        currentPage={Number(pagination.page)}
-        totalPages={pagination.totalPage}
-      />
+      <Suspense fallback={<div>Đang tải...</div>}>
+        <ProductList
+          products={items}
+          currentPage={Number(pagination.page)}
+          totalPages={pagination.totalPage}
+        />
+      </Suspense>
     </div>
   );
 }
