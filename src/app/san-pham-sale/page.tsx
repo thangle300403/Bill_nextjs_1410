@@ -4,6 +4,7 @@ import { Product } from "@/types/product";
 import { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
 interface ProductListResponse {
   items: Product[];
   totalItem: number;
@@ -17,21 +18,24 @@ export const metadata: Metadata = {
   title: "Sản phẩm",
 };
 
+// ✅ Promise-based searchParams type for Next.js 15+
 interface SanPhamPageProps {
-  searchParams?: {
+  searchParams?: Promise<{
     page?: string;
     sort?: string;
     priceRange?: string;
     search?: string;
-  };
+  }>;
 }
 
 export default async function SanPhamPage({ searchParams }: SanPhamPageProps) {
-  const searchParamsProps = await searchParams;
-  const page = Number(searchParamsProps?.page ?? 1);
-  const sort = searchParamsProps?.sort ?? "";
-  const priceRange = searchParamsProps?.priceRange ?? "";
-  const search = searchParamsProps?.search ?? "";
+  // ✅ Await the Promise (works in Next.js 15+)
+  const resolved = (await searchParams) || {};
+
+  const page = Number(resolved.page ?? 1);
+  const sort = resolved.sort ?? "";
+  const priceRange = resolved.priceRange ?? "";
+  const search = resolved.search ?? "";
 
   const queryParams = new URLSearchParams({
     item_per_page: "10",

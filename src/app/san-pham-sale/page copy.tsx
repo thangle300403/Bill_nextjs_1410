@@ -4,7 +4,6 @@ import { Product } from "@/types/product";
 import { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-
 interface ProductListResponse {
   items: Product[];
   totalItem: number;
@@ -18,24 +17,21 @@ export const metadata: Metadata = {
   title: "Sản phẩm",
 };
 
-// ✅ searchParams must be a Promise
 interface SanPhamPageProps {
-  searchParams?: Promise<{
+  searchParams?: {
     page?: string;
     sort?: string;
     priceRange?: string;
     search?: string;
-  }>;
+  };
 }
 
 export default async function SanPhamPage({ searchParams }: SanPhamPageProps) {
-  // ✅ Await the searchParams
-  const resolvedParams = (await searchParams) || {};
-
-  const page = Number(resolvedParams.page ?? 1);
-  const sort = resolvedParams.sort ?? "";
-  const priceRange = resolvedParams.priceRange ?? "";
-  const search = resolvedParams.search ?? "";
+  const searchParamsProps = await searchParams;
+  const page = Number(searchParamsProps?.page ?? 1);
+  const sort = searchParamsProps?.sort ?? "";
+  const priceRange = searchParamsProps?.priceRange ?? "";
+  const search = searchParamsProps?.search ?? "";
 
   const queryParams = new URLSearchParams({
     item_per_page: "10",
@@ -46,7 +42,7 @@ export default async function SanPhamPage({ searchParams }: SanPhamPageProps) {
   });
 
   const res = await axiosNonAuthInstanceNest.get<ProductListResponse>(
-    `/products?${queryParams.toString()}`
+    `/products?discount=1&${queryParams.toString()}`
   );
 
   const { items, pagination } = res.data;

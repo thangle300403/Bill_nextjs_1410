@@ -3,11 +3,10 @@ import ResetPassword from "@/components/auth/ResetPassword";
 export default async function ResetPassPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: { token?: string };
 }) {
-  // ✅ Await the Promise (new Next.js 15 behavior)
-  const params = await searchParams;
-  const token = params?.token;
+  const searchParamsPro = await searchParams;
+  const token = searchParamsPro.token;
 
   if (!token) {
     return (
