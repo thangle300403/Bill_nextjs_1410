@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-interface ActiveAccountPageProps {
-  searchParams: { token?: string };
-}
-
 export default async function ActiveAccountPage({
   searchParams,
-}: ActiveAccountPageProps) {
-  const token = searchParams?.token;
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const token =
+    typeof searchParams?.token === "string" ? searchParams.token : undefined;
 
   if (!token) {
     console.error("Thiếu token kích hoạt.");
@@ -16,8 +15,9 @@ export default async function ActiveAccountPage({
   }
 
   try {
-    const cookieStore = cookies(); // ✅ don't need await
-    const cookieList = cookieStore.getAll ? cookieStore.getAll() : [];
+    // 👇 add await here
+    const cookieStore = await cookies();
+    const cookieList = cookieStore.getAll();
     const cookieHeader = cookieList
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
