@@ -4,17 +4,11 @@ import { cookies } from "next/headers";
 export default async function ActiveAccountPage({
   searchParams,
 }: {
-  searchParams?:
-    | Record<string, string | string[] | undefined>
-    | Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const resolvedParams = (await searchParams) as
-    | Record<string, string | string[] | undefined>
-    | undefined;
-  const token =
-    typeof resolvedParams?.token === "string"
-      ? resolvedParams.token
-      : undefined;
+  // ✅ This matches the new Promise-based Next.js behavior
+  const params = await searchParams;
+  const token = typeof params?.token === "string" ? params.token : undefined;
 
   if (!token) {
     console.error("Thiếu token kích hoạt.");
@@ -22,7 +16,6 @@ export default async function ActiveAccountPage({
   }
 
   try {
-    // ✅ For Next 15+ canary (cookies() is async)
     const cookieStore = await cookies();
     const cookieList = cookieStore.getAll();
     const cookieHeader = cookieList
