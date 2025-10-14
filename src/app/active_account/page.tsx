@@ -1,23 +1,25 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
+interface ActiveAccountPageProps {
+  searchParams: { token?: string };
+}
+
 export default async function ActiveAccountPage({
   searchParams,
-}: {
-  searchParams: { token?: string };
-}) {
+}: ActiveAccountPageProps) {
   const token = searchParams.token;
 
   if (!token) {
     console.error("Thiếu token kích hoạt.");
-    return redirect("/?showLogin=true");
+    redirect("/?showLogin=true");
   }
 
   try {
-    const cookieStore = cookies();
-    const cookieVal = await cookieStore;
-    const cookieHeader = cookieVal
-      .getAll()
+    const cookieStore = await cookies();
+    const cookieList = cookieStore.getAll ? cookieStore.getAll() : [];
+
+    const cookieHeader = cookieList
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
 
@@ -25,9 +27,7 @@ export default async function ActiveAccountPage({
       `${process.env.NEXT_PUBLIC_NEST_API_URL}/active_account?token=${token}`,
       {
         method: "GET",
-        headers: {
-          Cookie: cookieHeader,
-        },
+        headers: { Cookie: cookieHeader },
         cache: "no-store",
       }
     );
