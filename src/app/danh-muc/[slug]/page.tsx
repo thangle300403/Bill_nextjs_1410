@@ -42,9 +42,7 @@ export default async function SanPhamPage({
   if (!categoryId) return notFound();
 
   // ✅ Fetch category list and find the correct one
-  const resCat = await axiosNonAuthInstanceNest.get<Category>(
-    `/categories/${categoryId}`
-  );
+  const resCat = await axiosNonAuthInstanceNest.get<Category>(`/categories`);
   const categoryName = resCat.data.name;
 
   const page = Number(resolvedSearch.page ?? 1);

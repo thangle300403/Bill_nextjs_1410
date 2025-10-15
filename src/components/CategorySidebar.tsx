@@ -90,7 +90,10 @@ export default function CategorySidebar({
                   : null}
               </span>
             </SheetTrigger>
-            <SheetContent side="left" className="...">
+            <SheetContent
+              side="left"
+              className="bg-white max-h-screen overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent"
+            >
               <SheetHeader>
                 <SheetTitle>Danh mục</SheetTitle>
               </SheetHeader>

@@ -11,7 +11,7 @@ import { Category } from "@/types/category";
 import ChatBotWidget from "@/components/chatBot/ChatBotWidget";
 
 export const metadata: Metadata = {
-  title: "Thangles Godashop",
+  title: "Thangles Billshop",
   description: "Web site created using Next.js App Router",
 };
 

@@ -23,6 +23,7 @@ export default function Product({ product }: Props) {
 
   return (
     <div className="product-card w-full max-w-[300px] min-h-[350px] h-[400px] bg-white border border-gray-300 shadow rounded-lg flex flex-col overflow-hidden p-2 transition-transform hover:-translate-y-1 hover:shadow-lg relative">
+      {/* Discount Badge */}
       {Number(product.price) > Number(product.sale_price) && (
         <div className="absolute top-2 left-2 bg-green-600 text-white font-bold text-sm px-2 py-1 rounded shadow z-10">
           -
@@ -35,18 +36,31 @@ export default function Product({ product }: Props) {
         </div>
       )}
 
-      <img
-        className="w-full h-[60%] object-cover rounded-t-md"
-        src={product.featured_image}
-        alt={product.name}
-      />
+      {/* Clickable image */}
+      <Link
+        href={createLinkProduct(product)}
+        title={product.name}
+        className="block relative w-full h-[60%] rounded-t-md overflow-hidden group"
+      >
+        <img
+          src={product.featured_image}
+          alt={product.name}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      </Link>
 
+      {/* Clickable product name */}
       <div className="text-center font-bold text-[min(5vw,22px)] my-2 px-2 line-clamp-2">
-        <Link href={createLinkProduct(product)} title={product.name}>
+        <Link
+          href={createLinkProduct(product)}
+          title={product.name}
+          className="hover:text-blue-600 transition-colors"
+        >
           {product.name}
         </Link>
       </div>
 
+      {/* Rating */}
       {isClient && product.avgStar != null && product.avgStar > 0 && (
         <div className="text-center mb-2">
           <StarRatings
@@ -60,6 +74,7 @@ export default function Product({ product }: Props) {
         </div>
       )}
 
+      {/* Price + Add to cart */}
       <div className="mt-auto flex justify-between items-center text-sm px-2">
         <div className="text-blue-600">
           {Number(product.price) !== Number(product.sale_price) && (
