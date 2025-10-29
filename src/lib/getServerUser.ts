@@ -10,13 +10,19 @@ export async function getServerUser() {
     .join("; ");
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_NEST_API_URL}/me`, {
-    headers: {
-      Cookie: cookieHeader,
-    },
+    headers: { Cookie: cookieHeader },
     credentials: "include",
     cache: "no-store",
   });
 
   if (!res.ok) return null;
-  return await res.json();
+
+  const text = await res.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }

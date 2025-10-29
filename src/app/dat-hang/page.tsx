@@ -1,4 +1,5 @@
 import CheckoutPage from "@/components/checkOut/CheckOutPage";
+// import ShowLoginPopup from "@/components/ShowLoginPopup";
 import { getServerUser } from "@/lib/getServerUser";
 import { axiosNonAuthInstanceNest } from "@/lib/utils";
 import WithAuthClient from "@/lib/WithAuthClient";
@@ -6,6 +7,10 @@ import { Province } from "@/types/address";
 
 export default async function Page() {
   const user = await getServerUser();
+
+  // if (!user) {
+  //   return <ShowLoginPopup />;
+  // }
 
   const provinceId = user?.ward?.provinceId;
   let shippingFee = 0;

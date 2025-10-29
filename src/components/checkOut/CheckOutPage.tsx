@@ -56,13 +56,29 @@ export default function CheckoutPage({ provinces, shippingFee }: Props) {
         cartItems: cartItemsWithPrice,
       };
 
-      await axiosAuth.post(`/checkout`, data);
+      // ⚙️ Nếu là COD (0) → xử lý bình thường
+      if (values.payment_method === "0") {
+        await axiosAuth.post(`/checkout`, data);
+        clearCart();
+        router.push("/tai-khoan/don-hang");
+        toast.success(
+          `Đặt hàng thành công, vui lòng kiểm tra email '${user?.email}'.`
+        );
+      } else if (values.payment_method === "1") {
+        const res = await axiosAuth.post(
+          process.env.NEXT_PUBLIC_VNPAY_URL || "",
+          data
+        );
 
-      clearCart();
-      router.push("/tai-khoan/don-hang");
-      toast.success(
-        `Đặt hàng thành công, vui lòng kiểm tra email '${user?.email}' về đơn hàng mới nhất.`
-      );
+        const { paymentUrl } = res.data;
+
+        if (paymentUrl) {
+          // Chuyển sang VNPay sandbox
+          window.location.href = paymentUrl;
+        } else {
+          toast.error("Không thể tạo liên kết thanh toán VNPay.");
+        }
+      }
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         toast.error(
@@ -171,15 +187,10 @@ export default function CheckoutPage({ provinces, shippingFee }: Props) {
                         className="mt-1"
                       />
                       <span>
-                        Chuyển khoản qua ngân hàng
+                        Thanh toán trực tuyến qua <strong>VNPay</strong>
                         <div className="mt-2 ml-6 text-sm text-gray-600 leading-relaxed">
-                          STK: <strong>0421003707901</strong>
-                          <br />
-                          Chủ TK: <strong>Nguyễn Hữu Lộc</strong>. Ngân hàng:
-                          Vietcombank TP.HCM
-                          <br />
-                          Ghi chú chuyển khoản là tên và chụp hình gửi lại cho
-                          shop dễ kiểm tra ạ
+                          Hỗ trợ thanh toán bằng thẻ ATM nội địa, Visa,
+                          MasterCard, và ví VNPay.
                         </div>
                       </span>
                     </label>
