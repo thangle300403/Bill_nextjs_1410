@@ -65,6 +65,8 @@ export default function OrderDetailPage() {
     const fetchOrder = async () => {
       try {
         const res = await axiosAuth.get(`/orders/${orderId}`);
+
+        console.log("🧪 Order detail:", res.data);
         setOrder(res.data);
       } catch (err) {
         toast.error("Không thể tải chi tiết đơn hàng.");
@@ -169,7 +171,7 @@ export default function OrderDetailPage() {
               <div>{order.shipping_housenumber_street}</div>
               <hr className="my-8" />
               <div>
-                {order.payment_method === 1
+                {order.payment_method === "1"
                   ? "Thanh toán online"
                   : "Thanh toán khi nhận hàng"}
               </div>

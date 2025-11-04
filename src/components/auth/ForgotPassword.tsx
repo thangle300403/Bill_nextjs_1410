@@ -12,6 +12,7 @@ export default function ForgotPassword() {
 
   const popupType = usePopupStore((state) => state.popupType);
   const closePopup = usePopupStore((state) => state.closePopup);
+  const showPopup = usePopupStore((state) => state.showPopup);
 
   const formik = useFormik({
     initialValues: {
@@ -106,7 +107,7 @@ export default function ForgotPassword() {
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={closePopup}
+                  onClick={() => showPopup("LOGIN")}
                   className="text-sm px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
                 >
                   Hủy

@@ -18,6 +18,7 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
   const [userImage, setUserImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [resultImage, setResultImage] = useState("");
+  const [resultVideo, setResultVideo] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiText, setAiText] = useState("");
   const { logs } = useAnonLogs();
@@ -53,8 +54,11 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
       formData.append("shirt_image_url", selectedShirt.featured_image);
 
       const res = await axiosNonAuthInstanceNode.post("/tryon", formData);
+      console.log("AI Try-On Response:", res.data);
 
       setResultImage(res.data.generatedImageUrl);
+      setResultVideo(res.data.generatedVideoUrl);
+
       setAiText(res.data.aiText);
       toast.success("Tạo ảnh thử đồ thành công!");
     } catch (err) {
@@ -224,6 +228,25 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
               📥 Tải ảnh xuống
             </a>
           </div>
+        </div>
+      )}
+
+      {resultVideo && (
+        <div className="mt-10 text-center">
+          <h4 className="text-lg font-semibold mb-3">
+            🎥 Video minh hoạ động:
+          </h4>
+          <video
+            src={resultVideo}
+            controls
+            autoPlay
+            loop
+            muted
+            className="rounded-xl border shadow-lg max-w-full mx-auto mt-4"
+          />
+          <p className="text-sm text-gray-500 mt-2">
+            (Video preview sẽ hết hạn sau vài phút)
+          </p>
         </div>
       )}
     </div>
