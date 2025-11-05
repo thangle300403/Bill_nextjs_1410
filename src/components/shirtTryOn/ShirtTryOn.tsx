@@ -222,29 +222,40 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
 
           {/* 🎬 New button appears only after image */}
           {!resultVideo && (
-            <button
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  const res = await axiosNonAuthInstanceNode.post(
-                    "/tryon/video",
-                    {
-                      imageUrl: resultImage,
+            <>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center mt-6">
+                  <Loader />
+                  <p className="text-sm text-gray-600 mt-2">
+                    Đang tạo video 360°... Vui lòng chờ
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const res = await axiosNonAuthInstanceNode.post(
+                        "/tryon/video",
+                        {
+                          imageUrl: resultImage,
+                        }
+                      );
+                      setResultVideo(res.data.generatedVideoUrl);
+                      toast.success("Đã tạo video 360° thành công!");
+                    } catch (err) {
+                      toast.error("Lỗi khi tạo video.");
+                      console.error(err);
+                    } finally {
+                      setLoading(false);
                     }
-                  );
-                  setResultVideo(res.data.generatedVideoUrl);
-                  toast.success("Đã tạo video 360° thành công!");
-                } catch (err) {
-                  toast.error("Lỗi khi tạo video.");
-                  console.error(err);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition"
-            >
-              🎬 Tạo video 360°
-            </button>
+                  }}
+                  className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition active:scale-95"
+                >
+                  🎬 Tạo video 360°
+                </button>
+              )}
+            </>
           )}
 
           <div className="mt-4">
