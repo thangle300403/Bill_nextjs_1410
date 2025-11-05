@@ -21,7 +21,7 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
   const [resultVideo, setResultVideo] = useState("");
   const [loading, setLoading] = useState(false);
   const [aiText, setAiText] = useState("");
-  const { logs } = useAnonLogs();
+  const { logs, clearLogs } = useAnonLogs();
 
   useEffect(() => {
     const filtered = shirtOptions.filter((shirt) =>
@@ -45,6 +45,8 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
       toast.warning("Vui lòng chọn áo và tải ảnh cơ thể!");
       return;
     }
+
+    clearLogs();
 
     setLoading(true);
     try {
@@ -140,17 +142,25 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
           />
         )}
       </div>
+
       {/* your try-on UI */}
       {loading && (
         <div className="mt-4 bg-gray-50 p-3 rounded-lg max-h-40 overflow-y-auto text-sm">
           <h4 className="font-semibold mb-2">📡 Trạng thái xử lý AI:</h4>
-          {logs.map((log, idx) => (
-            <p key={idx} className="text-gray-700">
-              [{new Date(log.ts).toLocaleTimeString()}] {log.msg}
-            </p>
-          ))}
+
+          {logs.length > 0 && (
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-green-400 to-blue-500 h-3 transition-all duration-500"
+                style={{
+                  width: `${Math.min(logs[logs.length - 1]?.step || 0, 100)}%`,
+                }}
+              ></div>
+            </div>
+          )}
         </div>
       )}
+
       {/* Submit Button */}
       {loading ? (
         <div className="flex items-center justify-center text-white">
@@ -229,6 +239,27 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
                   <p className="text-sm text-gray-600 mt-2">
                     Đang tạo video 360°... Vui lòng chờ
                   </p>
+
+                  {logs.length > 0 && (
+                    <div className="mt-4 bg-gray-50 p-3 rounded-lg max-h-40 overflow-y-auto text-sm w-full md:w-3/4">
+                      <h4 className="font-semibold mb-2">
+                        📡 Trạng thái xử lý AI:
+                      </h4>
+
+                      {/* Progress bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-purple-400 to-pink-500 h-3 transition-all duration-500"
+                          style={{
+                            width: `${Math.min(
+                              logs[logs.length - 1]?.step || 0,
+                              100
+                            )}%`,
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button
