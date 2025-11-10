@@ -20,6 +20,7 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
   const [resultImage, setResultImage] = useState("");
   const [resultVideo, setResultVideo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingVideo, setLoadingVideo] = useState(false);
   const [aiText, setAiText] = useState("");
   const { logs, clearLogs } = useAnonLogs();
 
@@ -233,7 +234,7 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
           {/* 🎬 New button appears only after image */}
           {!resultVideo && (
             <>
-              {loading ? (
+              {loadingVideo ? (
                 <div className="flex flex-col items-center justify-center mt-6">
                   <Loader />
                   <p className="text-sm text-gray-600 mt-2">
@@ -264,7 +265,7 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
               ) : (
                 <button
                   onClick={async () => {
-                    setLoading(true);
+                    setLoadingVideo(true);
                     try {
                       const res = await axiosNonAuthInstanceNode.post(
                         "/tryon/video",
@@ -278,7 +279,7 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
                       toast.error("Lỗi khi tạo video.");
                       console.error(err);
                     } finally {
-                      setLoading(false);
+                      setLoadingVideo(false);
                     }
                   }}
                   className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-5 rounded-lg shadow transition active:scale-95"
