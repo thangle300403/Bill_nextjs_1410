@@ -29,13 +29,17 @@ axiosAuth.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    console.log("🧭 [Interceptor Triggered]");
+    console.log("➡️ Error URL:", originalRequest.url);
+    console.log("➡️ Error Status:", error.response?.status);
+
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/refresh") &&
-      !originalRequest.url.includes("/me")
+      !originalRequest.url.includes("/refresh")
     ) {
       if (isRefreshing) {
+        console.log("🔁 [401 detected] Attempting refresh...");
         // queue requests until refresh completes
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -46,12 +50,15 @@ axiosAuth.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        console.log("[AXIOS] Refreshing token...");
         // 🔄 Request new access token
-        await axios.post(
+        const sq = await axios.post(
           `${process.env.NEXT_PUBLIC_NEST_API_URL}/refresh`,
           {},
           { withCredentials: true }
         );
+
+        console.log("Refresh response:", sq.data);
 
         authEvents.emit("refreshDone");
         processQueue(null);

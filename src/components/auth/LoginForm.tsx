@@ -10,6 +10,7 @@ import Link from "next/link";
 import Loader from "../Loader";
 import { authEvents, axiosAuth } from "@/lib/axiosAuth";
 import { axiosExpress } from "@/lib/axiosExpress";
+import { useAuthStore } from "@/store/authStore";
 
 export default function LoginForm() {
   const inputBase =
@@ -22,6 +23,7 @@ export default function LoginForm() {
   const showPopup = usePopupStore((state) => state.showPopup);
   const popupType = usePopupStore((state) => state.popupType);
   const closePopup = usePopupStore((state) => state.closePopup);
+  const { setLogin } = useAuthStore.getState();
 
   const formik = useFormik({
     initialValues: {
@@ -48,16 +50,15 @@ export default function LoginForm() {
       try {
         setIsLoaded(true);
         await axiosAuth.post(`/login`, values);
+        setLogin(true);
         console.log("🧪 COOKIE SAU LOGIN:", document.cookie);
-
         // ✅ merge chatbot session
         try {
           await axiosExpress.post(`/chatbot/merge-session-to-email`);
         } catch (mergeErr) {
           console.error("Merge session error:", mergeErr);
-          toast.warning("Không thể khôi phục lịch sử chat.");
         }
-
+        localStorage.setItem("auth_state", "logged_in");
         closePopup();
         authEvents.emit("refreshDone");
         toast.success("🎉 Đăng nhập thành công!");

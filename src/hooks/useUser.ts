@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
 import { User } from "@/types/user";
 import { authEvents, axiosAuth } from "@/lib/axiosAuth";
+import { useAuthStore } from "@/store/authStore";
 
 export const useUser = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const isLogin = useAuthStore((s) => s.isLogin);
+
+  console.log("🧪 useUser isLogin:", isLogin);
 
   const fetchUser = async () => {
+    if (!useAuthStore.getState().isLogin) return;
     try {
       const res = await axiosAuth.get("/me");
+      console.log("🧪 Fetched user:", res.data);
       setUser(res.data);
     } catch {
       setUser(null);
@@ -18,6 +24,12 @@ export const useUser = () => {
   };
 
   useEffect(() => {
+    if (!isLogin) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     fetchUser();
 
     const handler = () => {
@@ -28,7 +40,7 @@ export const useUser = () => {
     return () => {
       authEvents.off("refreshDone", handler);
     };
-  }, []);
+  }, [isLogin]);
 
   return { user, loading };
 };

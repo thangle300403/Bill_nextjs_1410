@@ -5,17 +5,19 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { axiosExpress } from "@/lib/axiosExpress";
 import Loader from "@/components/Loader";
+import { useAuthStore } from "@/store/authStore";
 
 export default function OAuthSuccess() {
   const router = useRouter();
+  const { setLogin } = useAuthStore.getState();
 
   useEffect(() => {
     const mergeSession = async () => {
       try {
         await axiosExpress.post("/chatbot/merge-session-to-email");
+        setLogin(true);
         toast.success("🎉 Đăng nhập thành công!");
       } catch (error) {
-        toast.warning("Không thể khôi phục lịch sử chat.");
         console.warn("Merge session failed:", error);
       } finally {
         router.push("/");

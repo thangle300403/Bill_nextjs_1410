@@ -25,14 +25,18 @@ import HeaderContent from "./HeaderContent";
 import NavBar from "./NavBar";
 import { authEvents, axiosAuth } from "@/lib/axiosAuth";
 import { useUser } from "@/hooks/useUser";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Header({ categories }: { categories: Category[] }) {
   const isMobile = useIsMobile();
   const items = useCartStore((state) => state.items);
   const showPopup = usePopupStore((state) => state.showPopup);
   const router = useRouter();
+  const isLogin = useAuthStore((s) => s.isLogin);
 
   const { user, loading } = useUser();
+
+  console.log("🧪 Header user:", user, "isLogin:", isLogin);
 
   if (loading) return <div>Đang tải...</div>;
 
@@ -40,6 +44,7 @@ export default function Header({ categories }: { categories: Category[] }) {
     try {
       // Gửi logout request với token
       await axiosAuth.post("/logout", {});
+      useAuthStore.getState().logout();
       authEvents.emit("refreshDone");
       toast.success("Đăng xuất thành công!");
       router.push("/?showLogin=true");
@@ -67,7 +72,7 @@ export default function Header({ categories }: { categories: Category[] }) {
         {isMobile && (
           <div className="fixed top-0 left-0 w-full z-50 bg-green-600 text-white text-sm py-2 shadow">
             <div className="max-w-screen-xl mx-auto px-4 flex justify-end items-center gap-4">
-              {user ? (
+              {isLogin ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
@@ -130,7 +135,7 @@ export default function Header({ categories }: { categories: Category[] }) {
 
               {/* Center — Auth Buttons or User Info */}
               <div className="flex-1 flex justify-center items-center gap-6">
-                {user ? (
+                {isLogin ? (
                   <div className="flex items-center space-x-4">
                     <Link
                       href="/tai-khoan/don-hang"

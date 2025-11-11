@@ -1,5 +1,4 @@
 import AccountPage from "@/components/userAccount/AccountPage";
-import WithAuthClient from "@/lib/WithAuthClient";
 import Link from "next/link";
 
 // app/dia-chi-giao-hang-mac-dinh/page.tsx
@@ -15,9 +14,7 @@ export default async function Page() {
         <span>/</span>
         <span className="font-medium text-black">Tài khoản</span>
       </div>
-      <WithAuthClient>
-        <AccountPage />
-      </WithAuthClient>
+      <AccountPage />
     </>
   );
 }
