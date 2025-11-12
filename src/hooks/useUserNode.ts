@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { User } from "@/types/user";
-import { authEvents, axiosAuth } from "@/lib/axiosAuth";
+import { authEvents } from "@/lib/axiosAuth";
 import { useAuthStore } from "@/store/authStore";
+import { axiosExpress } from "@/lib/axiosExpress";
 
-export const useUser = () => {
+export const useUserNode = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const isLogin = useAuthStore((s) => s.isLogin);
@@ -11,7 +12,7 @@ export const useUser = () => {
   const fetchUser = async () => {
     if (!useAuthStore.getState().isLogin) return;
     try {
-      const res = await axiosAuth.get("/me");
+      const res = await axiosExpress.get("/me");
       console.log("🧪 Fetched user:", res.data);
       setUser(res.data);
     } catch {

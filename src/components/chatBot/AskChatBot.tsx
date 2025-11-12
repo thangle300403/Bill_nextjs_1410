@@ -11,8 +11,8 @@ import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { axiosExpress } from "@/lib/axiosExpress";
 import { useChatLogs } from "@/hooks/useChatLogs";
-import { axiosAuth } from "@/lib/axiosAuth";
 import { useRef } from "react";
+import { useUser } from "@/hooks/useUser";
 
 export default function AskChatbot() {
   const [question, setQuestion] = useState("");
@@ -21,6 +21,7 @@ export default function AskChatbot() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   // const { logs, setLogs } = useChatLogs(sessionId);
   const { logs } = useChatLogs(sessionId);
+  const { user } = useUser();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [chatMessages, setChatMessages] = useState<
@@ -118,33 +119,49 @@ export default function AskChatbot() {
   }, [chatMessages]);
 
   useEffect(() => {
+    const initAndLoad = async () => {
+      try {
+        // 🧩 Step 1: Init session or email first
+        await initSessionOrEmail();
+
+        // 🧩 Step 2: Then load chat history after session is ready
+        await loadChatHistory();
+      } catch (err) {
+        console.error("❌ Error during init + load:", err);
+      }
+    };
+
     const initSessionOrEmail = async () => {
       try {
         // 🔐 Check login trạng thái từ FE
-        const res = await axiosAuth.get("/me");
-        const user = res.data;
         if (user?.email) {
           console.log("✅ Logged in as:", user.email);
-          setSessionId(null); // Sử dụng email làm key
+          setSessionId(null); // email làm key
           return;
         }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
-        // Chưa login → dùng session
+        console.log("⚠️ Chưa login → dùng session guest");
       }
 
-      // 🟡 Nếu chưa login → dùng session_id từ cookie hoặc khởi tạo mới
+      // 🟡 Nếu chưa login → gọi /start-session
       try {
+        console.log("⚠️ Chưa đăng nhập, khởi tạo session guest...");
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_NODE_API_URL}/start-session`,
           {
             credentials: "include",
           }
         );
+
+        console.log("❗ Fetch /start-session response:", res);
         const data = await res.json();
+
         if (data?.sessionId) {
           setSessionId(data.sessionId);
           console.log("✅ Guest Session ID:", data.sessionId);
+        } else {
+          console.warn("⚠️ Không nhận được sessionId từ server.");
         }
       } catch (err) {
         console.error("❌ Lỗi khi gọi /start-session:", err);
@@ -158,25 +175,26 @@ export default function AskChatbot() {
 
         if (Array.isArray(history) && history.length > 0) {
           setChatMessages(history);
+          console.log("✅ Lịch sử chat đã được tải.");
         } else {
-          console.log("Bạn chưa có lịch sử chat nào.");
+          console.log("ℹ️ Bạn chưa có lịch sử chat nào.");
         }
       } catch (err: unknown) {
         const axiosErr = err as AxiosError;
         const status = axiosErr?.response?.status;
 
         if (status === 400) {
-          console.log("Không thể truy xuất lịch sử chat.");
+          console.log("⚠️ Không thể truy xuất lịch sử chat.");
         } else {
           toast.error("Lỗi khi tải lịch sử chat.");
-          console.error("Error loading history:", axiosErr?.message);
+          console.error("🔥 Error loading history:", axiosErr?.message);
         }
       }
     };
 
-    initSessionOrEmail();
-    loadChatHistory();
-    console.log("📦 Current sessionId:", sessionId);
+    // 🚀 Run sequentially
+    initAndLoad();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

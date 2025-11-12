@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { axiosExpress } from "@/lib/axiosExpress";
-import Loader from "@/components/Loader";
 import { useAuthStore } from "@/store/authStore";
 
 export default function OAuthSuccess() {
@@ -14,7 +13,9 @@ export default function OAuthSuccess() {
   useEffect(() => {
     const mergeSession = async () => {
       try {
-        await axiosExpress.post("/chatbot/merge-session-to-email");
+        await new Promise((r) => setTimeout(r, 1000));
+        const res = await axiosExpress.post("/chatbot/merge-session-to-email");
+        console.log("Merge session response:", res.data);
         setLogin(true);
         toast.success("🎉 Đăng nhập thành công!");
       } catch (error) {
@@ -28,5 +29,5 @@ export default function OAuthSuccess() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <Loader></Loader>;
+  return <div>Quay về trang chủ...</div>;
 }

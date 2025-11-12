@@ -36,8 +36,6 @@ export default function Header({ categories }: { categories: Category[] }) {
 
   const { user, loading } = useUser();
 
-  console.log("🧪 Header user:", user, "isLogin:", isLogin);
-
   if (loading) return <div>Đang tải...</div>;
 
   const handleLogout = async () => {
