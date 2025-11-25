@@ -1,8 +1,15 @@
 import ShirtTryOn from "@/components/shirtTryOn/ShirtTryOn";
-import { axiosNonAuthInstanceNode } from "@/lib/utils";
 
 export default async function ShirtTryOnPage() {
-  const res = await axiosNonAuthInstanceNode.get("/shirts");
+  const res = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/shirts`, {
+    cache: "no-store",
+  });
 
-  return <ShirtTryOn product={res.data} />;
+  if (!res.ok) {
+    throw new Error("Failed to fetch shirts");
+  }
+
+  const data = await res.json();
+
+  return <ShirtTryOn product={data} />;
 }

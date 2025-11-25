@@ -7,9 +7,22 @@ import Loader from "../Loader"; // Update path if needed
 import { axiosNonAuthInstanceNode } from "@/lib/utils";
 import { Product } from "@/types/product";
 import { useAnonLogs } from "@/hooks/useAnonLogs";
+import { AxiosError } from "axios";
 type ShirtTryOnProps = {
   product: Product[];
 };
+
+interface TryOnErrorResponse {
+  message: string;
+  detail?: {
+    isHuman: boolean;
+    isHalfBodyOrMore: boolean;
+    isToyOrFake: boolean;
+    hasPromptInjection: boolean;
+    reason?: string;
+  };
+}
+
 export default function ShirtTryOn({ product }: ShirtTryOnProps) {
   const [shirtOptions] = useState(product || []);
   const [filteredShirts, setFilteredShirts] = useState(product || []);
@@ -64,9 +77,14 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
 
       setAiText(res.data.aiText);
       toast.success("Tạo ảnh thử đồ thành công!");
-    } catch (err) {
-      toast.error("Lỗi khi tạo ảnh thử đồ.");
-      console.error(err);
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<TryOnErrorResponse>;
+      const errorData = axiosErr.response?.data;
+
+      const msg = errorData?.message || "Lỗi khi tạo ảnh thử đồ.";
+      toast.warning(msg);
+
+      console.log("❌ Validation detail:", errorData?.detail);
     } finally {
       setLoading(false);
     }
@@ -150,14 +168,26 @@ export default function ShirtTryOn({ product }: ShirtTryOnProps) {
           <h4 className="font-semibold mb-2">📡 Trạng thái xử lý AI:</h4>
 
           {logs.length > 0 && (
-            <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-green-400 to-blue-500 h-3 transition-all duration-500"
-                style={{
-                  width: `${Math.min(logs[logs.length - 1]?.step || 0, 100)}%`,
-                }}
-              ></div>
-            </div>
+            <>
+              <div className="space-y-1">
+                {logs.map((l, i) => (
+                  <div key={i} className="text-gray-700">
+                    • {l.msg}
+                  </div>
+                ))}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-green-400 to-blue-500 h-3 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      logs[logs.length - 1]?.step || 0,
+                      100
+                    )}%`,
+                  }}
+                ></div>
+              </div>
+            </>
           )}
         </div>
       )}
