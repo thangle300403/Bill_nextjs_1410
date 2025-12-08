@@ -21,6 +21,7 @@ export default function AskChatbot() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   // const { logs, setLogs } = useChatLogs(sessionId);
   const { logs } = useChatLogs(sessionId);
+  const [showConfirm, setShowConfirm] = useState(false);
   const { user } = useUser();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -112,6 +113,23 @@ export default function AskChatbot() {
     }
 
     setLoading(false);
+  };
+
+  const deleteChatHistory = async () => {
+    try {
+      const res = await axiosExpress.delete("/chatbot/delHis");
+
+      if (res.data.success) {
+        toast.success(`🗑 Đã xoá ${res.data.deleted} dòng tin nhắn gần nhất!`);
+
+        setChatMessages((prev) => prev.slice(0, Math.max(prev.length - 30, 0)));
+      } else {
+        toast.error("Không thể xoá lịch sử.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi khi xoá lịch sử!");
+    }
   };
 
   useEffect(() => {
@@ -219,9 +237,22 @@ export default function AskChatbot() {
     >
       <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl w-full max-w-full h-[80vh] flex flex-col">
         {/* Header */}
-        <h2 className="text-3xl font-bold mb-4 text-center text-red-700 tracking-wide p-4">
-          Trợ lý AI - Bill Cipher
-        </h2>
+        <div className="relative flex justify-center p-4">
+          <h2 className="text-3xl font-bold text-center text-red-700 tracking-wide">
+            Trợ lý AI - Bill Cipher
+          </h2>
+
+          <button
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 
+               px-4 py-2 bg-red-500 text-white 
+               rounded-lg shadow-md hover:bg-red-600 
+               active:scale-95 text-sm"
+          >
+            Xóa Lịch sử
+          </button>
+        </div>
 
         <button
           type="button"
@@ -343,7 +374,9 @@ export default function AskChatbot() {
 
           {/* Buttons */}
           {loading ? (
-            <LoaderAI />
+            <>
+              <LoaderAI />
+            </>
           ) : (
             <div className="flex gap-3 w-full sm:w-auto justify-center sm:justify-end">
               <button
@@ -366,6 +399,37 @@ export default function AskChatbot() {
           )}
         </form>
       </div>
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-[320px] text-center">
+            <h3 className="text-lg font-bold mb-2 text-red-600">
+              Xác nhận xóa lịch sử?
+            </h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Hành động này sẽ xóa 30 tin nhắn gần nhất.
+            </p>
+
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+              >
+                Hủy
+              </button>
+
+              <button
+                onClick={async () => {
+                  await deleteChatHistory();
+                  setShowConfirm(false);
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

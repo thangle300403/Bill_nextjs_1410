@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React from "react";
@@ -61,7 +62,9 @@ export default function Cart() {
                 <div className="flex items-center gap-2 mt-2">
                   <button
                     onClick={() => addToCart({ ...item, quantity: -1 })}
-                    className="w-8 h-8 border rounded hover:bg-gray-200"
+                    className={`w-8 h-8 border rounded hover:bg-gray-200 ${
+                      item.quantity <= 1 ? "opacity-40 cursor-not-allowed" : ""
+                    }`}
                   >
                     −
                   </button>

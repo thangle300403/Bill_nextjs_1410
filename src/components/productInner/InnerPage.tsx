@@ -71,91 +71,93 @@ export default function ProductInner({ product, comments }: ProductInnerProps) {
 
   return (
     <>
+      <br></br>
       <div className="flex justify-center w-full px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl w-fit">
           <div>
             <ProductSider product={product}></ProductSider>
           </div>
-          <div className="flex flex-col items-center space-y-4 text-center">
-            <h1 className="text-3xl font-bold">{product.name}</h1>
+          <div className="rounded-2xl border border-gray-200 p-6 shadow-sm bg-white w-full max-w-md mx-auto">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <h1 className="text-3xl font-bold">{product.name}</h1>
 
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">Nhãn hàng: </span>
-              <span>{product.brand}</span>
-            </div>
+              {/* <div className="text-sm text-gray-600">
+                <span className="font-medium">Nhãn hàng: </span>
+                <span>{product.brand}</span>
+              </div> */}
 
-            <div className="text-sm">
-              <span className="font-medium">Trạng thái: </span>
-              {product.inventory_qty > 0 ? (
-                <span className="text-green-600 font-semibold">Còn hàng</span>
-              ) : (
-                <span className="text-red-500 font-semibold">Hết hàng</span>
-              )}
-            </div>
+              <div className="text-sm">
+                <span className="font-medium">Trạng thái: </span>
+                {product.inventory_qty > 0 ? (
+                  <span className="text-green-600 font-semibold">Còn hàng</span>
+                ) : (
+                  <span className="text-red-500 font-semibold">Hết hàng</span>
+                )}
+              </div>
 
-            <div className="text-base">
-              <span className="font-medium">Giá: </span>
-              {product.price !== product.sale_price && (
-                <span className="line-through text-gray-400 mr-2">
-                  {formatMoney(product.price)}
+              <div className="text-base">
+                <span className="font-medium">Giá: </span>
+                {product.price !== product.sale_price && (
+                  <span className="line-through text-gray-400 mr-2">
+                    {formatMoney(product.price)}
+                  </span>
+                )}
+                <span className="text-red-600 font-bold text-lg">
+                  {formatMoney(product.sale_price)}
                 </span>
-              )}
-              <span className="text-red-600 font-bold text-lg">
-                {formatMoney(product.sale_price)}
-              </span>
-            </div>
+              </div>
 
-            {product.inventory_qty > 0 ? (
-              <>
-                <input
-                  type="number"
-                  className="w-20 border border-gray-300 rounded px-2 py-1"
-                  value={quantity}
-                  min={1}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                />
-                <StyledWrapper>
-                  <button
-                    className="button"
-                    onClick={() => {
-                      addToCart({
-                        id: product.id,
-                        name: product.name,
-                        sale_price: product.sale_price,
-                        imageUrl: product.featured_image,
-                        quantity,
-                      });
+              {product.inventory_qty > 0 ? (
+                <>
+                  <input
+                    type="number"
+                    className="w-20 border border-gray-300 rounded px-2 py-1"
+                    value={quantity}
+                    min={1}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                  />
+                  <StyledWrapper>
+                    <button
+                      className="button"
+                      onClick={() => {
+                        addToCart({
+                          id: product.id,
+                          name: product.name,
+                          sale_price: product.sale_price,
+                          imageUrl: product.featured_image,
+                          quantity,
+                        });
 
-                      toast.success(
-                        ` Đã thêm ${quantity} "${product.name}" vào giỏ hàng!`
-                      );
-                      showPopup("CART");
-                    }}
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      className="bi bi-cart-check"
-                      height={24}
-                      width={24}
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="#fff"
+                        toast.success(
+                          ` Đã thêm ${quantity} "${product.name}" vào giỏ hàng!`
+                        );
+                        showPopup("CART");
+                      }}
                     >
-                      <path d="M11.354 6.354a.5.5 0 0 0-.708-.708L8 8.293 6.854 7.146a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l3-3z" />
-                      <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1H.5zm3.915 10L3.102 4h10.796l-1.313 7h-8.17zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z" />
-                    </svg>
-                    <p className="text">Thêm vào giỏ hàng</p>
-                  </button>
-                  <br></br>
-                  <div className="w-[260px] lg:block">
-                    <Announcement />
-                  </div>
-                </StyledWrapper>
-              </>
-            ) : null}
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="bi bi-cart-check"
+                        height={24}
+                        width={24}
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="#fff"
+                      >
+                        <path d="M11.354 6.354a.5.5 0 0 0-.708-.708L8 8.293 6.854 7.146a.5.5 0 1 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0l3-3z" />
+                        <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1H.5zm3.915 10L3.102 4h10.796l-1.313 7h-8.17zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z" />
+                      </svg>
+                      <p className="text">Thêm vào giỏ hàng</p>
+                    </button>
+                    <br></br>
+                    <div className="w-[260px] lg:block">
+                      <Announcement />
+                    </div>
+                  </StyledWrapper>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
-
       <div className="product-description mt-10">
         <div>
           <div role="tabpanel">
@@ -185,7 +187,6 @@ export default function ProductInner({ product, comments }: ProductInnerProps) {
           </div>
         </div>
       </div>
-
       <div className="product-related mt-12">
         <div>
           <RelatedProductSlider

@@ -34,7 +34,7 @@ export default function RelatedProductSlider({
           {relatedProducts.map((product) => (
             <CarouselItem
               key={product.id}
-              className="md:basis-1/3 sm:basis-1/2 basis-full px-2"
+              className="flex justify-center md:basis-1/3 sm:basis-1/2 basis-full px-2 translate-x-2"
             >
               <ProductCard product={product} />
             </CarouselItem>
@@ -42,8 +42,8 @@ export default function RelatedProductSlider({
         </CarouselContent>
 
         {/* More visible arrows */}
-        <CarouselPrevious className="!w-12 !h-12 !text-2xl bg-white border rounded-full shadow-lg left-2" />
-        <CarouselNext className="!w-12 !h-12 !text-2xl bg-white border rounded-full shadow-lg right-2" />
+        <CarouselPrevious className="hidden sm:flex !w-12 !h-12 !text-2xl bg-white border rounded-full shadow-lg left-2" />
+        <CarouselNext className="hidden sm:flex !w-12 !h-12 !text-2xl bg-white border rounded-full shadow-lg right-2" />
       </Carousel>
     </div>
   );

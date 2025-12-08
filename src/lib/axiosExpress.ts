@@ -6,7 +6,7 @@ export const expressAuthEvents = new EventEmitter();
 // ✅ Create Express API axios instance
 export const axiosExpress = axios.create({
   baseURL: process.env.NEXT_PUBLIC_NODE_API_URL,
-  withCredentials: true, // ✅ allow cookies
+  withCredentials: true,
 });
 
 let isRefreshing = false;

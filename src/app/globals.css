@@ -145,3 +145,13 @@
   transform: rotate(45deg);
   animation: shine 2s infinite linear;
 }
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
