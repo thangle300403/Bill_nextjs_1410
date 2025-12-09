@@ -13,6 +13,7 @@ import { axiosExpress } from "@/lib/axiosExpress";
 import { useChatLogs } from "@/hooks/useChatLogs";
 import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
+import { Trash2Icon } from "lucide-react";
 
 export default function AskChatbot() {
   const [question, setQuestion] = useState("");
@@ -242,15 +243,13 @@ export default function AskChatbot() {
             Trợ lý AI - Bill Cipher
           </h2>
 
+          {/* Desktop: Full text button */}
           <button
             type="button"
             onClick={() => setShowConfirm(true)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 
-               px-4 py-2 bg-red-500 text-white 
-               rounded-lg shadow-md hover:bg-red-600 
-               active:scale-95 text-sm"
+            className="absolute right-4 top-1/2 -translate-y-1/2"
           >
-            Xóa Lịch sử
+            <Trash2Icon className="w-8 h-8 text-red-500 hover:text-red-600 transition" />
           </button>
         </div>
 
