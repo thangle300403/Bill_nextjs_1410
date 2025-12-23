@@ -15,6 +15,28 @@ import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
 import { Trash2Icon } from "lucide-react";
 
+const AGENT_LABEL_MAP: Record<string, string> = {
+  consult: "🤝 Trợ lý chuyên tư vấn",
+  policy: "📜 Trợ lý chính sách",
+  add_to_cart: "🛒 Hệ thống giỏ hàng",
+  match_product: "🔎 Trợ lý tìm sản phẩm",
+  cancel: "❌ Trợ lý hủy đơn",
+  unknown: "🤖 Trợ lý AI",
+};
+function parseAgentMessage(content: string) {
+  const match = content.match(/\[\[agent:(.+?)\]\]/i);
+  const agentKey = match ? match[1].toLowerCase() : "unknown";
+
+  const label = AGENT_LABEL_MAP[agentKey] ?? AGENT_LABEL_MAP["unknown"];
+
+  const cleanContent = content.replace(/\[\[agent:.+?\]\]/i, "").trim();
+
+  return {
+    agentKey,
+    label,
+    cleanContent,
+  };
+}
 export default function AskChatbot() {
   const [question, setQuestion] = useState("");
   const [showFAQs, setShowFAQs] = useState(false);
@@ -29,7 +51,6 @@ export default function AskChatbot() {
   const [chatMessages, setChatMessages] = useState<
     { role: "user" | "ai"; content: string; created_at?: string }[]
   >([]);
-
   const addToCart = useCartStore.getState().addToCart;
 
   const submitWebSearch = async (query: string) => {
@@ -64,53 +85,107 @@ export default function AskChatbot() {
     setLoading(true);
     setQuestion("");
 
-    // Push user message first
+    // 1️⃣ Push user message
     setChatMessages((prev) => [
       ...prev,
       {
         role: "user",
         content: messageToSend,
-        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       },
     ]);
 
     try {
-      const res = await axiosExpress.post(`/chatbot`, {
-        question: messageToSend,
-      });
-      const data = res.data;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_NODE_API_URL}/chatbot`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ question: messageToSend }),
+        }
+      );
 
-      // Push AI messages
-      if (data.aiMessages && Array.isArray(data.aiMessages)) {
-        setChatMessages((prev) => [...prev, ...data.aiMessages]);
-        // setLogs([]);
+      if (!response.body) {
+        throw new Error("No stream body");
       }
 
-      // Add to cart logic
-      if (
-        data.cartOutput &&
-        data.cartOutput.action === "add_to_cart" &&
-        data.cartOutput.item
-      ) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      let aiBuffer = "";
+      let cartOutput: any = null;
+
+      // 2️⃣ Đọc stream
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const events = chunk.split("\n\n").filter(Boolean);
+
+        for (const ev of events) {
+          if (!ev.startsWith("data:")) continue;
+
+          const payload = JSON.parse(ev.replace("data:", "").trim());
+
+          // 🔹 Token typing (TEXT TẠM)
+          if (payload.type === "token") {
+            aiBuffer += payload.content;
+
+            setChatMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "ai" && !last.created_at) {
+                return [...prev.slice(0, -1), { ...last, content: aiBuffer }];
+              }
+              return [...prev, { role: "ai", content: aiBuffer }];
+            });
+          }
+
+          // 🧹 CLEAR STREAM TẠM (QUAN TRỌNG)
+          if (payload.type === "clear_stream") {
+            aiBuffer = "";
+
+            setChatMessages((prev) =>
+              prev.filter((m) => !(m.role === "ai" && !m.created_at))
+            );
+          }
+
+          // ✅ AI message CHÍNH THỨC (đã có agent tag)
+          if (payload.type === "ai_message") {
+            setChatMessages((prev) => [
+              ...prev,
+              {
+                role: "ai",
+                content: payload.content,
+                created_at: payload.created_at ?? new Date().toISOString(),
+              },
+            ]);
+          }
+
+          // 🔚 End
+          if (payload.type === "end") {
+            cartOutput = payload.cartOutput;
+          }
+        }
+      }
+
+      // 3️⃣ Handle cart
+      if (cartOutput?.action === "add_to_cart" && cartOutput.item) {
         addToCart({
-          id: data.cartOutput.item.id,
-          name: data.cartOutput.item.name,
-          sale_price: Number(data.cartOutput.item.sale_price),
-          imageUrl: data.cartOutput.item.imageUrl || "",
-          quantity: data.cartOutput.item.quantity || 1,
+          id: cartOutput.item.id,
+          name: cartOutput.item.name,
+          sale_price: Number(cartOutput.item.sale_price),
+          imageUrl: cartOutput.item.imageUrl || "",
+          quantity: cartOutput.item.quantity || 1,
         });
-        toast.success(
-          `🛒 Đã thêm "${data.cartOutput.item.name}" vào giỏ hàng!`
-        );
+        toast.success(`🛒 Đã thêm "${cartOutput.item.name}" vào giỏ hàng!`);
       }
-    } catch (err: unknown) {
-      const axiosErr = err as AxiosError;
-      if (axiosErr?.response?.status === 401) {
-        toast.warning("Hãy đăng nhập để chat với Bill!");
-      } else {
-        toast.error("Lỗi hệ thống! Vui lòng thử lại.");
-      }
-      console.log(err);
+    } catch (err) {
+      console.error(err);
+      toast.error("Lỗi khi chat với AI");
     }
 
     setLoading(false);
@@ -217,6 +292,13 @@ export default function AskChatbot() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const extractBracketOptions = (content: string) => {
+    const matches = content.match(/\{(.*?)\}/g);
+    if (!matches) return [];
+
+    return matches.map((m) => m.replace(/^\{|\}$/g, ""));
+  };
+
   const FAQs = [
     "Chính sách đổi trả như thế nào và vợt cho người mới chơi ??",
     "chính sách đổi trả và giá vợt cầu lông yonex astrox 77 pro ??",
@@ -281,63 +363,93 @@ export default function AskChatbot() {
         <div
           className="flex-1 overflow-y-auto space-y-4 px-4 pb-32"
           ref={chatContainerRef}
-        >
-          {chatMessages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex ${
-                msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`relative max-w-[90%] px-5 py-3 rounded-2xl text-base shadow-md whitespace-pre-wrap transition-all
-    ${
-      msg.role === "user"
-        ? "bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-opacity-30 backdrop-blur-md border border-white/30 shadow-md text-gray-900 font-medium px-5 py-3 rounded-2xl"
-        : "bg-green-50 text-green-900 text-4xl font-['Lora'] border-2 border-green-300 shadow-md p-6 rounded-md"
-    }`}
-              >
-                <ReactMarkdown
-                  rehypePlugins={[rehypeRaw]}
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    button: (props) => {
-                      const node = props.node as any;
-                      const dataMsg =
-                        node?.properties?.dataMsg ||
-                        node?.properties?.dataProduct;
-                      return (
-                        <button
-                          className="bg-green-600 text-white px-3 py-2 rounded mt-2 ml-2 hover:bg-green-700 active:scale-95 text-sm"
-                          onClick={() => {
-                            if (!dataMsg) return;
-                            const messageToSend = decodeURIComponent(dataMsg);
-                            submitChatMessage(messageToSend);
-                          }}
-                        >
-                          {props.children}
-                        </button>
-                      );
-                    },
-                  }}
-                >
-                  {msg.content}
-                </ReactMarkdown>
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
 
-                <span className="text-xs text-gray-400">
-                  {new Date(
-                    (msg.created_at ?? "").replace(" ", "T")
-                  ).toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+            const btn = target.closest(
+              ".add-to-cart-btn"
+            ) as HTMLButtonElement | null;
+
+            if (!btn) return;
+
+            const encodedMsg = btn.dataset.msg;
+            if (!encodedMsg) return;
+
+            const messageToSend = decodeURIComponent(encodedMsg);
+            submitChatMessage(messageToSend);
+          }}
+        >
+          {chatMessages.map((msg, i) => {
+            const isAI = msg.role === "ai";
+
+            const parsed = isAI ? parseAgentMessage(msg.content) : null;
+
+            const displayContent = isAI ? parsed?.cleanContent : msg.content;
+
+            const agentLabel = isAI ? parsed?.label : null;
+
+            const options = isAI
+              ? extractBracketOptions(displayContent ?? "")
+              : [];
+            return (
+              <div
+                key={i}
+                className={`flex ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`relative max-w-[90%] px-5 py-3 rounded-2xl text-base shadow-md whitespace-pre-wrap transition-all
+            ${
+              msg.role === "user"
+                ? "bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-opacity-30 backdrop-blur-md border border-white/30 text-gray-900 font-medium"
+                : "bg-green-50 text-green-900 border-2 border-green-300"
+            }`}
+                >
+                  {/* ✅ 2. ReactMarkdown CHỈ render text */}
+                  {agentLabel && (
+                    <div className="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-200 text-green-900">
+                      {agentLabel}
+                    </div>
+                  )}
+                  <ReactMarkdown
+                    rehypePlugins={[rehypeRaw]}
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {displayContent}
+                  </ReactMarkdown>
+
+                  {/* ✅ 3. Action buttons render RIÊNG */}
+                  {options.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {options.map((opt, idx) => (
+                        <button
+                          key={idx}
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold active:scale-95"
+                          onClick={() => setQuestion(opt)}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Timestamp */}
+                  <span className="block mt-2 text-xs text-gray-400">
+                    {new Date(
+                      (msg.created_at ?? "").replace(" ", "T")
+                    ).toLocaleString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={bottomRef} />
         </div>
 
