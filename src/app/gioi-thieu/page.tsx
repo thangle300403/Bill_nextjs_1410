@@ -89,14 +89,14 @@ export default async function AboutUsPage() {
                 <br />
                 📍 Địa chỉ: 123 Đường Cầu Lông, Quận 9, TP.HCM
                 <br />
-                ✉️ Email: <strong>support@billshop.vn</strong>
+                ✉️ Email: <strong>thangle300403@gmail.com</strong>
                 <br />
                 🌐 Website:{" "}
                 <a
-                  href="https://billshop.vn"
+                  href="https://billbad.com"
                   className="text-blue-600 hover:underline"
                 >
-                  https://billshop.vn
+                  https://billbad.com
                 </a>
               </p>
             </section>

@@ -11,11 +11,13 @@ export default async function Page() {
 
   return (
     <>
-      <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2 text-sm text-gray-700">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
         <Link href="/" className="text-blue-600 hover:underline">
           Trang chủ
         </Link>
-        <span>/</span>
+
+        <span className="text-gray-400">/</span>
+
         <span className="font-medium text-black">Chi tiết đơn hàng</span>
       </div>
       <WithAuthClient>

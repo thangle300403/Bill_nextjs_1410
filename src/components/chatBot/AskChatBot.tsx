@@ -52,6 +52,7 @@ export default function AskChatbot() {
     { role: "user" | "ai"; content: string; created_at?: string }[]
   >([]);
   const addToCart = useCartStore.getState().addToCart;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const submitWebSearch = async (query: string) => {
     if (!query.trim()) return;
@@ -85,6 +86,9 @@ export default function AskChatbot() {
     setLoading(true);
     setQuestion("");
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     // 1️⃣ Push user message
     setChatMessages((prev) => [
       ...prev,
@@ -105,6 +109,7 @@ export default function AskChatbot() {
           },
           credentials: "include",
           body: JSON.stringify({ question: messageToSend }),
+          signal: controller.signal,
         }
       );
 
@@ -183,9 +188,13 @@ export default function AskChatbot() {
         });
         toast.success(`🛒 Đã thêm "${cartOutput.item.name}" vào giỏ hàng!`);
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Lỗi khi chat với AI");
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        console.log("🛑 Chat aborted by user");
+      } else {
+        console.error(err);
+        toast.error("Lỗi khi chat với AI");
+      }
     }
 
     setLoading(false);
