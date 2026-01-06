@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏸 BillShop – Frontend (Next.js)
 
-## Getting Started
+This repository contains the **customer-facing frontend** of the BillShop platform, built with **Next.js**.
 
-First, run the development server:
+The frontend is responsible for presenting the user interface, handling client-side interactions, and communicating with backend and AI services.
 
-```bash
+---
+
+## 🎯 Responsibilities of This Repository
+
+The Next.js frontend handles:
+
+- User interface rendering
+- Product browsing and searching
+- User authentication flow
+- Shopping cart and checkout flow
+- AI chatbot interaction (UI layer)
+- VR Shirt Try-On user experience
+- Responsive and accessible design
+
+This repository does **not** contain backend business logic or AI orchestration logic.
+
+---
+
+## 🧑‍💻 User Features
+
+### Product & Shopping
+- Browse badminton products
+- View product details
+- Add products to cart
+- Checkout as guest or authenticated user
+- View order history (authenticated users)
+
+### User Account
+- User registration
+- User login and logout
+- Profile and address management
+
+### AI Interaction
+- Chat interface for AI product consultation
+- Chat-based “Add to Cart” interaction
+- Display of AI-generated responses
+
+### VR Shirt Try-On
+- Upload user image
+- Select shirt product
+- Preview AI-generated try-on results
+- Visual feedback and progress display
+
+---
+
+## 🧩 Tech Stack
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- ShadCN UI
+- REST API communication
+
+---
+
+## 🎨 UI & UX Design
+
+- Responsive layout for desktop and mobile
+- Component-based architecture
+- Clear separation between pages and reusable components
+- User-friendly forms and validation feedback
+- Optimized performance using Next.js features
+
+---
+
+## 🛠️ Installation
+
+### Prerequisites
+
+- Node.js (v18 or later)
+- npm
+
+---
+
+### Step 1: Clone the repository
+git clone https://github.com/thangle300403/Bill_nextjs_1410.git
+
+### Step 2: Install dependencies
+npm install
+
+### Step 3: Run the application
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 👨‍💻 Author
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Lê Quốc Thắng
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Software Engineering – Graduation Project
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ho Chi Minh City University of Technology and Education
