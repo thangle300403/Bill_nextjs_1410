@@ -45,3 +45,12 @@ export interface RelatedProduct {
   description: string;
   avgStar?: number | null;
 }
+
+export type ProductCard = {
+  id: number;
+  name: string;
+  price: number;
+  discount: number;
+  image: string;
+  description: string;
+};

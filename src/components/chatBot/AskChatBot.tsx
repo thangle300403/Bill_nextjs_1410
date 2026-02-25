@@ -1,204 +1,75 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { toast } from "react-toastify";
-import { AxiosError } from "axios";
-import LoaderAI from "./LoaderAI";
-import { useCartStore } from "@/store/cartStore";
-import rehypeRaw from "rehype-raw";
-import remarkGfm from "remark-gfm";
-import { axiosExpress } from "@/lib/axiosExpress";
-import { useChatLogs } from "@/hooks/useChatLogs";
-import { useRef } from "react";
 import { useUser } from "@/hooks/useUser";
+import { axiosExpress } from "@/lib/axiosExpress";
+import { AxiosError } from "axios";
+import { toast } from "react-toastify";
+import Link from "next/link";
+import { createLinkProductCard } from "@/lib/utils";
+import { ProductCard } from "@/types/product";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Trash2Icon } from "lucide-react";
 
-const AGENT_LABEL_MAP: Record<string, string> = {
-  consult: "🤝 Trợ lý chuyên tư vấn",
-  policy: "📜 Trợ lý chính sách",
-  add_to_cart: "🛒 Hệ thống giỏ hàng",
-  match_product: "🔎 Trợ lý tìm sản phẩm",
-  cancel: "❌ Trợ lý hủy đơn",
-  unknown: "🤖 Trợ lý AI",
+type NormalizedAI = {
+  answer: string;
+  products: ProductCard[];
 };
-function parseAgentMessage(content: string) {
-  const match = content.match(/\[\[agent:(.+?)\]\]/i);
-  const agentKey = match ? match[1].toLowerCase() : "unknown";
 
-  const label = AGENT_LABEL_MAP[agentKey] ?? AGENT_LABEL_MAP["unknown"];
-
-  const cleanContent = content.replace(/\[\[agent:.+?\]\]/i, "").trim();
-
-  return {
-    agentKey,
-    label,
-    cleanContent,
-  };
+function decodeStreamChunk(chunk: string) {
+  return chunk
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t");
 }
+
+function normalizeAIContent(raw: unknown): NormalizedAI {
+  // Case 1: BE đã gửi object
+  if (typeof raw === "object" && raw !== null && "answer" in raw) {
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      answer: String((raw as any).answer ?? ""),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      products: Array.isArray((raw as any).products)
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (raw as any).products
+        : [],
+    };
+  }
+  // Case 2: BE gửi JSON string
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.answer) {
+        return {
+          answer: parsed.answer,
+          products: parsed.products ?? [],
+        };
+      }
+    } catch {
+      // ignore
+    }
+    // Case 3: text thuần
+    return { answer: raw, products: [] };
+  }
+  // fallback
+  return { answer: "", products: [] };
+}
+
 export default function AskChatbot() {
-  const [question, setQuestion] = useState("");
-  const [showFAQs, setShowFAQs] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  // const { logs, setLogs } = useChatLogs(sessionId);
-  const { logs } = useChatLogs(sessionId);
-  const [showConfirm, setShowConfirm] = useState(false);
   const { user } = useUser();
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [, setSessionId] = useState<string | null>(null);
+  const [products, setProducts] = useState<ProductCard[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const [chatMessages, setChatMessages] = useState<
     { role: "user" | "ai"; content: string; created_at?: string }[]
   >([]);
-  const addToCart = useCartStore.getState().addToCart;
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const submitWebSearch = async (query: string) => {
-    if (!query.trim()) return;
-    setLoading(true);
-
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "user",
-        content: `🌐 Web Search: ${query}`,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-
-    try {
-      const res = await axiosExpress.post(`/chatbot/websearch`, { query });
-      const data = res.data;
-
-      if (data.aiMessages && Array.isArray(data.aiMessages)) {
-        setChatMessages((prev) => [...prev, ...data.aiMessages]);
-      }
-    } catch (err) {
-      toast.error("❌ Lỗi khi tìm kiếm web!");
-      console.error(err);
-    }
-
-    setLoading(false);
-  };
-
-  const submitChatMessage = async (messageToSend: string) => {
-    setLoading(true);
-    setQuestion("");
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    // 1️⃣ Push user message
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "user",
-        content: messageToSend,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_NODE_API_URL}/chatbot`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ question: messageToSend }),
-          signal: controller.signal,
-        }
-      );
-
-      if (!response.body) {
-        throw new Error("No stream body");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-
-      let aiBuffer = "";
-      let cartOutput: any = null;
-
-      // 2️⃣ Đọc stream
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const events = chunk.split("\n\n").filter(Boolean);
-
-        for (const ev of events) {
-          if (!ev.startsWith("data:")) continue;
-
-          const payload = JSON.parse(ev.replace("data:", "").trim());
-
-          // 🔹 Token typing (TEXT TẠM)
-          if (payload.type === "token") {
-            aiBuffer += payload.content;
-
-            setChatMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (last?.role === "ai" && !last.created_at) {
-                return [...prev.slice(0, -1), { ...last, content: aiBuffer }];
-              }
-              return [...prev, { role: "ai", content: aiBuffer }];
-            });
-          }
-
-          // 🧹 CLEAR STREAM TẠM (QUAN TRỌNG)
-          if (payload.type === "clear_stream") {
-            aiBuffer = "";
-
-            setChatMessages((prev) =>
-              prev.filter((m) => !(m.role === "ai" && !m.created_at))
-            );
-          }
-
-          // ✅ AI message CHÍNH THỨC (đã có agent tag)
-          if (payload.type === "ai_message") {
-            setChatMessages((prev) => [
-              ...prev,
-              {
-                role: "ai",
-                content: payload.content,
-                created_at: payload.created_at ?? new Date().toISOString(),
-              },
-            ]);
-          }
-
-          // 🔚 End
-          if (payload.type === "end") {
-            cartOutput = payload.cartOutput;
-          }
-        }
-      }
-
-      // 3️⃣ Handle cart
-      if (cartOutput?.action === "add_to_cart" && cartOutput.item) {
-        addToCart({
-          id: cartOutput.item.id,
-          name: cartOutput.item.name,
-          sale_price: Number(cartOutput.item.sale_price),
-          imageUrl: cartOutput.item.imageUrl || "",
-          quantity: cartOutput.item.quantity || 1,
-        });
-        toast.success(`🛒 Đã thêm "${cartOutput.item.name}" vào giỏ hàng!`);
-      }
-    } catch (err: any) {
-      if (err.name === "AbortError") {
-        console.log("🛑 Chat aborted by user");
-      } else {
-        console.error(err);
-        toast.error("Lỗi khi chat với AI");
-      }
-    }
-
-    setLoading(false);
-  };
+  const [input, setInput] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const deleteChatHistory = async () => {
     try {
@@ -217,6 +88,31 @@ export default function AskChatbot() {
     }
   };
 
+  const loadChatHistory = async () => {
+    try {
+      const res = await axiosExpress.get(`/chatbot/history`);
+      const history = res.data;
+
+      if (Array.isArray(history) && history.length > 0) {
+        setChatMessages(history);
+        console.log("✅ Lịch sử chat đã được tải.");
+      } else {
+        console.log("ℹ️ Bạn chưa có lịch sử chat nào.");
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError;
+      const status = axiosErr?.response?.status;
+
+      if (status === 400) {
+        console.log("⚠️ Không thể truy xuất lịch sử chat.");
+      } else {
+        toast.error("Lỗi khi tải lịch sử chat.");
+        console.error("🔥 Error loading history:", axiosErr?.message);
+      }
+    }
+  };
+
+  // Auto scroll xuống cuối
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
@@ -224,10 +120,9 @@ export default function AskChatbot() {
   useEffect(() => {
     const initAndLoad = async () => {
       try {
-        // 🧩 Step 1: Init session or email first
+        //  Step 1: Init session or email first
         await initSessionOrEmail();
-
-        // 🧩 Step 2: Then load chat history after session is ready
+        //  Step 2: Load chat history
         await loadChatHistory();
       } catch (err) {
         console.error("❌ Error during init + load:", err);
@@ -235,290 +130,284 @@ export default function AskChatbot() {
     };
 
     const initSessionOrEmail = async () => {
-      try {
-        // 🔐 Check login trạng thái từ FE
-        if (user?.email) {
-          console.log("✅ Logged in as:", user.email);
-          setSessionId(null); // email làm key
-          return;
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (err) {
-        console.log("⚠️ Chưa login → dùng session guest");
+      console.log("user", user);
+      // ĐÃ LOGIN → KHÔNG TẠO SESSION
+      if (user?.email) {
+        console.log("✅ Logged in as:", user.email);
+        setSessionId(null);
+        return;
       }
 
-      // 🟡 Nếu chưa login → gọi /start-session
-      try {
-        console.log("⚠️ Chưa đăng nhập, khởi tạo session guest...");
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_NODE_API_URL}/start-session`,
-          {
-            credentials: "include",
-          }
-        );
+      // CHƯA LOGIN → TẠO GUEST SESSION
+      console.log("⚠️ Chưa đăng nhập, khởi tạo session guest...");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_NODE_API_URL}/start-session`,
+        { credentials: "include" },
+      );
 
-        console.log("❗ Fetch /start-session response:", res);
-        const data = await res.json();
-
-        if (data?.sessionId) {
-          setSessionId(data.sessionId);
-          console.log("✅ Guest Session ID:", data.sessionId);
-        } else {
-          console.warn("⚠️ Không nhận được sessionId từ server.");
-        }
-      } catch (err) {
-        console.error("❌ Lỗi khi gọi /start-session:", err);
+      const data = await res.json();
+      if (data?.sessionId) {
+        setSessionId(data.sessionId);
+        console.log("✅ Guest Session ID:", data.sessionId);
       }
     };
 
-    const loadChatHistory = async () => {
-      try {
-        const res = await axiosExpress.get(`/chatbot/history`);
-        const history = res.data;
-
-        if (Array.isArray(history) && history.length > 0) {
-          setChatMessages(history);
-          console.log("✅ Lịch sử chat đã được tải.");
-        } else {
-          console.log("ℹ️ Bạn chưa có lịch sử chat nào.");
-        }
-      } catch (err: unknown) {
-        const axiosErr = err as AxiosError;
-        const status = axiosErr?.response?.status;
-
-        if (status === 400) {
-          console.log("⚠️ Không thể truy xuất lịch sử chat.");
-        } else {
-          toast.error("Lỗi khi tải lịch sử chat.");
-          console.error("🔥 Error loading history:", axiosErr?.message);
-        }
-      }
-    };
-
-    // 🚀 Run sequentially
+    if (user === undefined) return;
     initAndLoad();
+  }, [user]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => {
+    console.log("👤 chatMessages updated:", chatMessages);
+  }, [chatMessages]);
 
-  const extractBracketOptions = (content: string) => {
-    const matches = content.match(/\{(.*?)\}/g);
-    if (!matches) return [];
+  const sendMessage = async () => {
+    if (!input.trim()) return;
 
-    return matches.map((m) => m.replace(/^\{|\}$/g, ""));
+    const question = input;
+    setInput("");
+
+    console.log("🟢 USER QUESTION:", question);
+
+    // 1️⃣ Add user message
+    setChatMessages((prev) => {
+      console.log("➕ add user message, prev length =", prev.length);
+      return [...prev, { role: "user", content: question }];
+    });
+
+    // 2️⃣ Add empty assistant message (để stream vào)
+    let assistantIndex: number;
+
+    setChatMessages((prev) => {
+      assistantIndex = prev.length;
+      console.log("➕ add assistant placeholder at index =", assistantIndex);
+      return [...prev, { role: "ai", content: "" }];
+    });
+
+    console.log("🌐 OPEN SSE CONNECTION");
+
+    // 3️⃣ Open SSE
+    const es = new EventSource(
+      `http://localhost:3001/chat/stream?q=${encodeURIComponent(question)}`,
+      { withCredentials: true },
+    );
+
+    es.onopen = () => {
+      console.log("✅ SSE CONNECTED");
+    };
+
+    es.onmessage = async (event) => {
+      const chunk = event.data;
+
+      if (chunk === "[DONE]") {
+        console.log("🛑 SSE DONE");
+        es.close();
+        void loadChatHistory();
+        return;
+      }
+
+      const decodedChunk = decodeStreamChunk(chunk);
+
+      // 4️⃣ Append token vào assistant message
+      setChatMessages((prev) => {
+        const next = [...prev];
+
+        if (!next[assistantIndex]) {
+          console.error("❌ assistantIndex not found!", assistantIndex, next);
+          return prev;
+        }
+
+        next[assistantIndex] = {
+          ...next[assistantIndex],
+          content: next[assistantIndex].content + decodedChunk,
+        };
+
+        return next;
+      });
+    };
+
+    es.addEventListener("products", (event) => {
+      console.log("🛒 FE RECEIVED PRODUCTS RAW:", event.data);
+
+      try {
+        const parsed = JSON.parse(event.data);
+        console.log("🛒 FE PARSED PRODUCTS:", parsed);
+        setProducts(parsed);
+      } catch (err) {
+        console.error("❌ FE FAILED TO PARSE PRODUCTS", err);
+      }
+    });
+
+    es.onerror = (err) => {
+      console.error("❌ SSE ERROR", err);
+      es.close();
+      setProducts([]);
+      void loadChatHistory();
+    };
   };
 
-  const FAQs = [
-    "Chính sách đổi trả như thế nào và vợt cho người mới chơi ??",
-    "chính sách đổi trả và giá vợt cầu lông yonex astrox 77 pro ??",
-    "tôi muốn thêm yonex duora z strike vào giỏ hàng",
-    "Các sản phẩm bán chạy nhất tháng rồi?",
-    "Chính sách đổi trả như thế nào?",
-    "Liệt kê các đơn hàng đã bị hủy của tôi?",
-    "Hủy đơn hàng số 13.",
-  ];
+  useEffect(() => {
+    console.log("📦 FE products state updated:", products);
+    console.log("📦 ENV IMAGE", process.env.NEXT_NODE_PUBLIC_IMAGE_BASE_URL);
+  }, [products]);
 
   return (
-    <div
-      style={{
-        maxWidth: "100%",
-        padding: "0 20px",
-        margin: "40px auto",
-        fontFamily: "Arial",
-      }}
-    >
-      <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl w-full max-w-full h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="relative flex justify-center p-4">
-          <h2 className="text-3xl font-bold text-center text-red-700 tracking-wide">
-            Trợ lý AI - Bill Cipher
-          </h2>
-
-          {/* Desktop: Full text button */}
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            className="absolute right-4 top-1/2 -translate-y-1/2"
-          >
-            <Trash2Icon className="w-8 h-8 text-red-500 hover:text-red-600 transition" />
-          </button>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white border-b px-4 py-3 flex items-center gap-3">
+        <img
+          src="/images/ChatbotBill3.png"
+          alt="Bill"
+          className="w-8 h-8 rounded-full"
+        />
+        <div>
+          <p className="font-semibold text-gray-800">Bill AI Assistant</p>
+          <p className="text-xs text-green-600">● Online</p>
         </div>
 
         <button
           type="button"
-          onClick={() => setShowFAQs((prev) => !prev)}
-          className="w-[300px] mx-auto mb-2 px-2 py-2 bg-yellow-200 hover:bg-yellow-300 text-yellow-800 rounded-lg font-medium shadow transition"
+          onClick={() => setShowConfirm(true)}
+          className="absolute right-4 top-1/2 -translate-y-1/2"
         >
-          {showFAQs ? "Ẩn câu hỏi thường gặp" : "Các câu hỏi thường gặp"}
+          <Trash2Icon className="w-8 h-8 text-red-500 hover:text-red-600 transition" />
         </button>
+      </div>
 
-        {/* FAQ Buttons */}
-        {showFAQs && (
-          <div className="mb-2 px-4 flex flex-wrap gap-2">
-            {FAQs.map((faq, i) => (
-              <button
-                key={i}
-                type="button"
-                className="bg-yellow-50 hover:bg-yellow-100 text-orange-700 rounded-full px-3 py-1 text-sm font-medium shadow transition border border-yellow-100"
-                onClick={() => setQuestion(faq)}
+      {/* chatMessages */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-gray-50">
+        {chatMessages.map((msg, idx) => {
+          if (msg.role === "ai") {
+            const { answer, products } = normalizeAIContent(msg.content);
+
+            return (
+              <div key={idx} className="space-y-3">
+                {/* TEXT */}
+                <div className="markdown prose max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
+                  >
+                    {answer}
+                  </ReactMarkdown>
+                </div>
+
+                {/* PRODUCTS */}
+                {products.length > 0 && (
+                  <div className="space-y-2">
+                    {products.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={createLinkProductCard(p)}
+                        className="block"
+                      >
+                        <div className="flex items-center gap-3 rounded-xl border p-3 bg-gray-50">
+                          <img
+                            src={p.image}
+                            className="h-16 w-16 rounded-md object-contain border"
+                            alt={p.name}
+                          />
+
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">{p.name}</p>
+
+                            <p className="text-green-600 font-medium text-sm">
+                              {p.price.toLocaleString()}đ
+                              {p.discount > 0 && ` (-${p.discount}%)`}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // USER
+          return (
+            <div key={idx} className="text-right">
+              <div className="inline-block rounded-xl bg-blue-600 text-white p-3">
+                {msg.content}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Product cards */}
+        {products.length > 0 && (
+          <div className="mt-4 space-y-3">
+            {products.map((p) => (
+              <Link
+                key={p.id}
+                href={createLinkProductCard(p)}
+                className="block"
               >
-                {faq}
-              </button>
+                <div className="flex items-center gap-3 rounded-xl border bg-white p-3 shadow-sm">
+                  {/* Image */}
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="h-16 w-16 rounded-md object-contain border"
+                  />
+
+                  {/* Info */}
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-800">{p.name}</p>
+
+                    <p className="text-sm text-green-600">
+                      {p.price.toLocaleString()}đ
+                      {p.discount > 0 && (
+                        <span className="ml-2 text-red-500">
+                          -{p.discount}%
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         )}
+        <div ref={bottomRef} />
+      </div>
 
-        {/* Scrollable Chat Area */}
-        <div
-          className="flex-1 overflow-y-auto space-y-4 px-4 pb-32"
-          ref={chatContainerRef}
-          onClick={(e) => {
-            const target = e.target as HTMLElement;
-
-            const btn = target.closest(
-              ".add-to-cart-btn"
-            ) as HTMLButtonElement | null;
-
-            if (!btn) return;
-
-            const encodedMsg = btn.dataset.msg;
-            if (!encodedMsg) return;
-
-            const messageToSend = decodeURIComponent(encodedMsg);
-            submitChatMessage(messageToSend);
-          }}
-        >
-          {chatMessages.map((msg, i) => {
-            const isAI = msg.role === "ai";
-
-            const parsed = isAI ? parseAgentMessage(msg.content) : null;
-
-            const displayContent = isAI ? parsed?.cleanContent : msg.content;
-
-            const agentLabel = isAI ? parsed?.label : null;
-
-            const options = isAI
-              ? extractBracketOptions(displayContent ?? "")
-              : [];
-            return (
-              <div
-                key={i}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`relative max-w-[90%] px-5 py-3 rounded-2xl text-base shadow-md whitespace-pre-wrap transition-all
-            ${
-              msg.role === "user"
-                ? "bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-opacity-30 backdrop-blur-md border border-white/30 text-gray-900 font-medium"
-                : "bg-green-50 text-green-900 border-2 border-green-300"
-            }`}
-                >
-                  {/* ✅ 2. ReactMarkdown CHỈ render text */}
-                  {agentLabel && (
-                    <div className="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-200 text-green-900">
-                      {agentLabel}
-                    </div>
-                  )}
-                  <ReactMarkdown
-                    rehypePlugins={[rehypeRaw]}
-                    remarkPlugins={[remarkGfm]}
-                  >
-                    {displayContent}
-                  </ReactMarkdown>
-
-                  {/* ✅ 3. Action buttons render RIÊNG */}
-                  {options.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {options.map((opt, idx) => (
-                        <button
-                          key={idx}
-                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold active:scale-95"
-                          onClick={() => setQuestion(opt)}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Timestamp */}
-                  <span className="block mt-2 text-xs text-gray-400">
-                    {new Date(
-                      (msg.created_at ?? "").replace(" ", "T")
-                    ).toLocaleString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
-        </div>
-
-        {logs.length > 0 && (
-          <div className="bg-white border border-yellow-300 rounded-lg p-4 text-sm font-mono shadow-inner max-h-48 overflow-y-auto space-y-1">
-            <div>
-              <span className="text-gray-400 text-xs">
-                {new Date(logs[0].ts).toLocaleTimeString("vi-VN")}:
-              </span>
-              {logs[0].msg}
-            </div>
-          </div>
-        )}
-
-        {/* Fixed Form at Bottom */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (question.trim()) {
-              submitChatMessage(question.trim());
-            }
-          }}
-          className="px-4 py-4 flex flex-col sm:flex-row items-center gap-3 border-t shadow-md bg-white z-10"
-        >
-          {/* Input field */}
-          <input
-            className="flex-1 px-4 py-3 border border-blue-200 rounded-xl text-base sm:text-lg md:text-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition w-full sm:w-auto"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Nhập câu hỏi cho Bill..."
-            required
+      {/* Input */}
+      <div className="border-t bg-white px-4 py-3">
+        <div className="flex items-end gap-2">
+          <textarea
+            value={input}
+            onChange={(e) => {
+              const lines = e.target.value.split("\n");
+              if (lines.length <= 3) {
+                setInput(e.target.value);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Enter = gửi, Shift+Enter = xuống dòng
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            rows={1}
+            placeholder="Nhập câu hỏi của bạn..."
+            className="
+        flex-1 resize-none rounded-xl border px-4 py-2 text-sm
+        focus:outline-none focus:ring-2 focus:ring-blue-500
+        max-h-[4.5rem] overflow-y-auto
+      "
           />
 
-          {/* Buttons */}
-          {loading ? (
-            <>
-              <LoaderAI />
-            </>
-          ) : (
-            <div className="flex gap-3 w-full sm:w-auto justify-center sm:justify-end">
-              <button
-                type="submit"
-                className="bg-yellow-400 hover:bg-yellow-500 transition text-white font-bold px-6 py-3 rounded-xl text-base sm:text-lg shadow active:scale-95 w-full sm:w-auto"
-                disabled={loading}
-              >
-                GỬI
-              </button>
-
-              <button
-                type="button"
-                onClick={() => submitWebSearch(question)}
-                className="bg-green-400 hover:bg-green-500 transition text-white font-bold px-6 py-3 rounded-xl text-base sm:text-lg shadow active:scale-95 w-full sm:w-auto"
-                disabled={loading}
-              >
-                Search web
-              </button>
-            </div>
-          )}
-        </form>
+          <button
+            onClick={sendMessage}
+            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+          >
+            Gửi
+          </button>
+        </div>
       </div>
+
       {showConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-[320px] text-center">

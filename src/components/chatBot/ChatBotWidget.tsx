@@ -58,7 +58,7 @@ export default function ChatBotWidget() {
           <div
             ref={chatbotRef}
             className="relative bg-white rounded-t-3xl shadow-2xl border border-yellow-100 overflow-auto"
-            style={{ minHeight: 400, height: 1000, maxHeight: "100vh" }}
+            style={{ height: "90vh" }}
           >
             {/* Close Button */}
             <button

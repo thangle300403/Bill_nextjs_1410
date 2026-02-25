@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import slugify from "slugify";
-import { Product } from "@/types/product";
+import { Product, ProductCard } from "@/types/product";
 import axios from "axios";
 import { Category } from "@/types/category";
 import { Order } from "@/types/order";
@@ -18,6 +18,11 @@ export const formatMoney = (money: number): string => {
 };
 
 export const createLinkProduct = (product: Product): string => {
+  const safeName = typeof product.name === "string" ? product.name : "san-pham";
+  return `/san-pham/${slugify(safeName)}-${product.id}`;
+};
+
+export const createLinkProductCard = (product: ProductCard): string => {
   const safeName = typeof product.name === "string" ? product.name : "san-pham";
   return `/san-pham/${slugify(safeName)}-${product.id}`;
 };
