@@ -24,11 +24,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const resCategory = await axiosNonAuthInstanceNest.get<CategoryListResponse>(
-    `/categories`
-  );
-
-  const categories = resCategory.data.items;
+  const categories = await axiosNonAuthInstanceNest
+    .get<CategoryListResponse>(`/categories`)
+    .then((res) => res.data.items)
+    .catch(() => []);
 
   return (
     <html lang="vi">

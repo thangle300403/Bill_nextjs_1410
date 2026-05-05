@@ -83,7 +83,9 @@ export default async function HomePage() {
   } catch (err) {
     console.error("SSR fetch failed:", err);
     return (
-      <HomeClient serverData={{ featured: [], latest: [], categoried: [] }} />
+      <Suspense fallback={<div>Dang tai...</div>}>
+        <HomeClient serverData={{ featured: [], latest: [], categoried: [] }} />
+      </Suspense>
     );
   }
 }
