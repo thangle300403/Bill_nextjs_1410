@@ -68,3 +68,23 @@ export const axiosNonAuthInstanceNode = axios.create({
   baseURL: process.env.NEXT_PUBLIC_NODE_API_URL,
   withCredentials: false,
 });
+
+export type ProductListFallback<T> = {
+  items: T[];
+  totalItem: number;
+  pagination: {
+    page: string;
+    totalPage: number;
+  };
+};
+
+export const createEmptyProductList = <T>(
+  page: number | string = 1
+): ProductListFallback<T> => ({
+  items: [],
+  totalItem: 0,
+  pagination: {
+    page: String(page || 1),
+    totalPage: 1,
+  },
+});

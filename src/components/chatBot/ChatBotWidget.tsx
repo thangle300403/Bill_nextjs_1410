@@ -49,7 +49,7 @@ export default function ChatBotWidget() {
 
       {/* Slide-over Chatbot Panel */}
       <div
-        className={`fixed z-50 bottom-0 right-0 w-full sm:w-[700px] transition-transform duration-300 ${
+        className={`fixed z-50 bottom-0 right-0 w-full sm:w-[650px] transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "90vh", zIndex: 9999 }}
@@ -58,7 +58,7 @@ export default function ChatBotWidget() {
           <div
             ref={chatbotRef}
             className="relative bg-white rounded-t-3xl shadow-2xl border border-yellow-100 overflow-auto"
-            style={{ height: "90vh" }}
+            style={{ height: "85vh" }}
           >
             {/* Close Button */}
             <button
@@ -101,7 +101,9 @@ const StyledWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 24px rgba(84, 76, 11, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4);
+    box-shadow:
+      0 4px 24px rgba(84, 76, 11, 0.6),
+      0 6px 20px rgba(0, 0, 0, 0.4);
   }
 
   button span {

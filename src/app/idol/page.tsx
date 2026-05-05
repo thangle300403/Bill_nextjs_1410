@@ -4,13 +4,23 @@ import PlayerSelector from "@/components/idol/PlayerSelector";
 import Link from "next/link";
 
 export default async function Page() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_NEST_API_URL}/athlete-gear/players`,
-    {
-      cache: "no-store",
+  const apiUrl = process.env.NEXT_PUBLIC_NEST_API_URL;
+  let players: string[] = [];
+
+  if (apiUrl) {
+    try {
+      const res = await fetch(`${apiUrl}/athlete-gear/players`, {
+        cache: "no-store",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        players = Array.isArray(data) ? data : [];
+      }
+    } catch {
+      players = [];
     }
-  );
-  const players: string[] = await res.json();
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

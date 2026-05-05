@@ -1,5 +1,5 @@
 import ProductList from "@/components/productPage/ProductList";
-import { axiosNonAuthInstanceNest } from "@/lib/utils";
+import { axiosNonAuthInstanceNest, createEmptyProductList } from "@/lib/utils";
 import { Product } from "@/types/product";
 import { Metadata } from "next";
 import { extractCategoryId } from "@/lib/utils";
@@ -42,8 +42,24 @@ export default async function SanPhamPage({
   if (!categoryId) return notFound();
 
   // ✅ Fetch category list and find the correct one
-  const resCat = await axiosNonAuthInstanceNest.get<Category>(`/categories`);
-  const categoryName = resCat.data.name;
+  const categoryName = await axiosNonAuthInstanceNest
+    .get<Category | { items?: Category[] } | Category[]>(`/categories`)
+    .then((res) => {
+      const data = res.data;
+      const categories = Array.isArray(data)
+        ? data
+        : "items" in data && Array.isArray(data.items)
+          ? data.items
+          : [];
+
+      return (
+        categories.find((category) => String(category.id) === categoryId)
+          ?.name ||
+        (!Array.isArray(data) && "name" in data ? data.name : "") ||
+        ""
+      );
+    })
+    .catch(() => "");
 
   const page = Number(resolvedSearch.page ?? 1);
   const sort = resolvedSearch.sort ?? "";
@@ -57,11 +73,12 @@ export default async function SanPhamPage({
     ...(priceRange ? { priceRange } : {}),
   });
 
-  const res = await axiosNonAuthInstanceNest.get<ProductListResponse>(
-    `/products?${queryParams.toString()}`
-  );
+  const productList = await axiosNonAuthInstanceNest
+    .get<ProductListResponse>(`/products?${queryParams.toString()}`)
+    .then((res) => res.data)
+    .catch(() => createEmptyProductList<Product>(page));
 
-  const { items, pagination } = res.data;
+  const { items, pagination } = productList;
 
   return (
     <div className="container py-8">

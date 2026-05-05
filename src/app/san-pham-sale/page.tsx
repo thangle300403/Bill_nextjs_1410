@@ -1,5 +1,5 @@
 import ProductList from "@/components/productPage/ProductList";
-import { axiosNonAuthInstanceNest } from "@/lib/utils";
+import { axiosNonAuthInstanceNest, createEmptyProductList } from "@/lib/utils";
 import { Product } from "@/types/product";
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -46,11 +46,12 @@ export default async function SanPhamPage({ searchParams }: SanPhamPageProps) {
     ...(priceRange ? { priceRange } : {}),
   });
 
-  const res = await axiosNonAuthInstanceNest.get<ProductListResponse>(
-    `/products?discount=1&${queryParams.toString()}`
-  );
+  const productList = await axiosNonAuthInstanceNest
+    .get<ProductListResponse>(`/products?discount=1&${queryParams.toString()}`)
+    .then((res) => res.data)
+    .catch(() => createEmptyProductList<Product>(page));
 
-  const { items, pagination } = res.data;
+  const { items, pagination } = productList;
 
   return (
     <div className="container py-8">

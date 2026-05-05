@@ -218,10 +218,10 @@ export default function Header({ categories }: { categories: Category[] }) {
             <HeaderContent></HeaderContent>
           </Suspense>
 
+          <NavBar></NavBar>
+
           {/* Add Sidebar Trigger to header */}
           <CategorySidebar categories={categories}></CategorySidebar>
-
-          <NavBar></NavBar>
         </div>
       </header>
       <RegisterForm />

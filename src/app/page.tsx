@@ -80,8 +80,7 @@ export default async function HomePage() {
         </Suspense>
       </>
     );
-  } catch (err) {
-    console.error("SSR fetch failed:", err);
+  } catch {
     return (
       <Suspense fallback={<div>Dang tai...</div>}>
         <HomeClient serverData={{ featured: [], latest: [], categoried: [] }} />

@@ -26,10 +26,10 @@ export default async function Page() {
     }
   }
 
-  const provincesRes = await axiosNonAuthInstanceNest.get<Province[]>(
-    `/provinces`
-  );
-  const provinces = provincesRes.data;
+  const provinces = await axiosNonAuthInstanceNest
+    .get<Province[]>(`/provinces`)
+    .then((res) => res.data)
+    .catch(() => []);
 
   return (
     <WithAuthClient>

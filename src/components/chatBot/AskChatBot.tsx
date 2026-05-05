@@ -12,7 +12,8 @@ import { createLinkProductCard } from "@/lib/utils";
 import { ProductCard } from "@/types/product";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { Trash2Icon } from "lucide-react";
+import { ArrowUpIcon, SquareIcon, Trash2Icon } from "lucide-react";
+import LoaderAI from "./LoaderAI";
 
 type NormalizedAI = {
   answer: string;
@@ -64,12 +65,23 @@ export default function AskChatbot() {
   const [, setSessionId] = useState<string | null>(null);
   const [products, setProducts] = useState<ProductCard[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [chatMessages, setChatMessages] = useState<
     { role: "user" | "ai"; content: string; created_at?: string }[]
   >([]);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const resizeInput = () => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+  };
 
   const deleteChatHistory = async () => {
     try {
@@ -160,11 +172,32 @@ export default function AskChatbot() {
     console.log("👤 chatMessages updated:", chatMessages);
   }, [chatMessages]);
 
+  useEffect(() => {
+    return () => {
+      eventSourceRef.current?.close();
+    };
+  }, []);
+
+  const stopStreaming = () => {
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+    setLoading(false);
+    setChatMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === "ai" && !last.content.trim()) {
+        return prev.slice(0, -1);
+      }
+      return prev;
+    });
+  };
+
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const question = input;
     setInput("");
+    requestAnimationFrame(resizeInput);
+    setLoading(true);
 
     console.log("🟢 USER QUESTION:", question);
 
@@ -187,9 +220,10 @@ export default function AskChatbot() {
 
     // 3️⃣ Open SSE
     const es = new EventSource(
-      `http://localhost:3001/chat/stream?q=${encodeURIComponent(question)}`,
+      `${process.env.NEXT_PUBLIC_CHAT_API_URL}/chat/stream?q=${encodeURIComponent(question)}`,
       { withCredentials: true },
     );
+    eventSourceRef.current = es;
 
     es.onopen = () => {
       console.log("✅ SSE CONNECTED");
@@ -199,8 +233,10 @@ export default function AskChatbot() {
       const chunk = event.data;
 
       if (chunk === "[DONE]") {
-        console.log("🛑 SSE DONE");
+        toast.success("Trả lời đã hoàn tất!");
         es.close();
+        eventSourceRef.current = null;
+        setLoading(false);
         void loadChatHistory();
         return;
       }
@@ -240,6 +276,8 @@ export default function AskChatbot() {
     es.onerror = (err) => {
       console.error("❌ SSE ERROR", err);
       es.close();
+      eventSourceRef.current = null;
+      setLoading(false);
       setProducts([]);
       void loadChatHistory();
     };
@@ -278,17 +316,27 @@ export default function AskChatbot() {
         {chatMessages.map((msg, idx) => {
           if (msg.role === "ai") {
             const { answer, products } = normalizeAIContent(msg.content);
+            const showMessageLoader =
+              loading && idx === chatMessages.length - 1 && !answer.trim();
 
             return (
               <div key={idx} className="space-y-3">
                 {/* TEXT */}
                 <div className="markdown prose max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeRaw]}
-                  >
-                    {answer}
-                  </ReactMarkdown>
+                  {showMessageLoader ? (
+                    <div className="flex h-16 items-center justify-start overflow-hidden">
+                      <div className="origin-left scale-[0.35]">
+                        <LoaderAI />
+                      </div>
+                    </div>
+                  ) : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeRaw]}
+                    >
+                      {answer}
+                    </ReactMarkdown>
+                  )}
                 </div>
 
                 {/* PRODUCTS */}
@@ -377,11 +425,10 @@ export default function AskChatbot() {
         <div className="flex items-end gap-2">
           <textarea
             value={input}
+            ref={inputRef}
             onChange={(e) => {
-              const lines = e.target.value.split("\n");
-              if (lines.length <= 3) {
-                setInput(e.target.value);
-              }
+              setInput(e.target.value);
+              requestAnimationFrame(resizeInput);
             }}
             onKeyDown={(e) => {
               // Enter = gửi, Shift+Enter = xuống dòng
@@ -393,17 +440,27 @@ export default function AskChatbot() {
             rows={1}
             placeholder="Nhập câu hỏi của bạn..."
             className="
-        flex-1 resize-none rounded-xl border px-4 py-2 text-sm
+        flex-1 resize-none rounded-xl border px-4 py-2 text-sm leading-5
         focus:outline-none focus:ring-2 focus:ring-blue-500
-        max-h-[4.5rem] overflow-y-auto
+        min-h-10 max-h-[120px] overflow-y-auto
       "
           />
 
           <button
-            onClick={sendMessage}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+            onClick={loading ? stopStreaming : sendMessage}
+            aria-label={loading ? "Dừng" : "Gửi"}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white text-[0px] transition ${
+              loading
+                ? "border-red-500 text-red-500 hover:bg-red-50"
+                : "border-blue-600 text-blue-600 hover:bg-blue-50"
+            }`}
           >
-            Gửi
+            <span className="hidden">{loading ? "Dừng" : "Gửi"}</span>
+            {loading ? (
+              <SquareIcon className="h-4 w-4 fill-current" />
+            ) : (
+              <ArrowUpIcon className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>

@@ -1,15 +1,24 @@
 import ShirtTryOn from "@/components/shirtTryOn/ShirtTryOn";
 
 export default async function ShirtTryOnPage() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_NODE_API_URL}/shirts`, {
-    cache: "no-store",
-  });
+  const apiUrl = process.env.NEXT_PUBLIC_NODE_API_URL;
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch shirts");
+  if (!apiUrl) {
+    return <ShirtTryOn product={[]} />;
   }
 
-  const data = await res.json();
+  try {
+    const res = await fetch(`${apiUrl}/shirts`, {
+      cache: "no-store",
+    });
 
-  return <ShirtTryOn product={data} />;
+    if (!res.ok) {
+      return <ShirtTryOn product={[]} />;
+    }
+
+    const data = await res.json();
+    return <ShirtTryOn product={Array.isArray(data) ? data : []} />;
+  } catch {
+    return <ShirtTryOn product={[]} />;
+  }
 }

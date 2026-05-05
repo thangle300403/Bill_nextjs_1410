@@ -9,11 +9,19 @@ export async function getServerUser() {
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_NEST_API_URL}/me`, {
-    headers: { Cookie: cookieHeader },
-    credentials: "include",
-    cache: "no-store",
-  });
+  const apiUrl = process.env.NEXT_PUBLIC_NEST_API_URL;
+  if (!apiUrl) return null;
+
+  let res: Response;
+  try {
+    res = await fetch(`${apiUrl}/me`, {
+      headers: { Cookie: cookieHeader },
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch {
+    return null;
+  }
 
   if (!res.ok) return null;
 
